@@ -1,42 +1,54 @@
 package com.homekitchen.backend.controller;
 
 import com.homekitchen.backend.model.FoodItem;
-import com.homekitchen.backend.repository.FoodItemRepository;
+import com.homekitchen.backend.service.FoodService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.homekitchen.backend.dto.ApiResponse;
 
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:5173/")
 @RestController
 @RequestMapping("/foods")
 public class HomeController {
-    private final FoodItemRepository repository;
-    public HomeController(FoodItemRepository repository) {
-        this.repository = repository;
+    private final FoodService foodService;
+
+    public HomeController(FoodService foodService) {
+        this.foodService = foodService;
     }
 
     @GetMapping
     public List<FoodItem> getAllFoods() {
-        return repository.findAll();
+        return foodService.getAllFoods();
+    }
+
+    @GetMapping("/category/{category}")
+    public List<FoodItem> getFoodsByCategory(@PathVariable String category) {
+        return foodService.getFoodsByCategory(category);
     }
 
     @PostMapping
     public FoodItem addFood(@RequestBody FoodItem foodItem) {
-        return repository.save(foodItem);
-    }
-
-    @DeleteMapping("/{id}")
-    public String deleteFood(@PathVariable Long id) {
-        repository.deleteById(id);
-        return "Food item deleted successfully";
+        return foodService.addFood(foodItem);
     }
 
     @PutMapping("/{id}")
     public FoodItem updateFood(@PathVariable Long id, @RequestBody FoodItem updatedFood) {
-        FoodItem foodItem = repository.findById(id).orElseThrow();
+        return foodService.updateFood(id, updatedFood);
+    }
 
-        foodItem.setName(updatedFood.getName());
-        foodItem.setPrice(updatedFood.getPrice());
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse> deleteFood(@PathVariable Long id) {
+        foodService.deleteFood(id);
+        return ResponseEntity.ok(
+                new ApiResponse("Food item deleted successfully")
+        );
+    }
 
-        return repository.save(foodItem);
+    @DeleteMapping
+    public String deleteAllFoods() {
+        foodService.deleteAllFoods();
+        return "All food items deleted";
     }
 }
