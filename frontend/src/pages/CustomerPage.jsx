@@ -21,6 +21,7 @@ export default function CustomerPage() {
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [orderPlaced, setOrderPlaced] = useState(false);
   const sectionRefs = useRef({});
 
   useEffect(() => {
@@ -65,6 +66,26 @@ export default function CustomerPage() {
   const scrollToCategory = (cat) => {
     setActiveCategory(cat);
     sectionRefs.current[cat]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const placeOrder = () => {
+    const order = {
+      customerName: "Customer",
+      items: cartItems.map(({ food, qty }) => ({
+        foodName: food.name,
+        price: food.price,
+        quantity: qty,
+      })),
+    };
+
+    axios.post("http://localhost:8080/orders", order)
+      .then(() => {
+        setCart({});
+        setCartOpen(false);
+        setOrderPlaced(true);
+        setTimeout(() => setOrderPlaced(false), 4000);
+      })
+      .catch(() => alert("Failed to place order. Try again."));
   };
 
   return (
@@ -218,7 +239,7 @@ export default function CustomerPage() {
                 <span>Total</span>
                 <span className="cart-total-amount">₹{cartTotal}</span>
               </div>
-              <button className="place-order-btn">
+              <button className="place-order-btn" onClick={placeOrder}>
                 Place Order · ₹{cartTotal}
               </button>
               <p className="cart-note">Order placement coming in Step 3 🚀</p>
@@ -227,6 +248,11 @@ export default function CustomerPage() {
         </div>
       )}
 
+      {orderPlaced && (
+        <div className="order-toast">
+          ✅ Order placed! We'll get it ready soon.
+        </div>
+      )}
     </div>
   );
 }

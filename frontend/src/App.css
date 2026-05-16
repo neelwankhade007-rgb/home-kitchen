@@ -462,3 +462,18 @@ button { font-family: var(--font-body); cursor: pointer; border: none; backgroun
   .category-pills { padding: 10px 20px; }
   .navbar { padding: 0 20px; }
 }
+
+.order-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a7a45;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
