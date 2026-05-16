@@ -3,7 +3,6 @@ package com.homekitchen.backend.service;
 import com.homekitchen.backend.exception.FoodException;
 import com.homekitchen.backend.model.FoodItem;
 import com.homekitchen.backend.repository.FoodItemRepository;
-import com.homekitchen.backend.exception.FoodException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
