@@ -1,5 +1,6 @@
 package com.homekitchen.backend.service;
 
+import com.homekitchen.backend.exception.FoodException;
 import com.homekitchen.backend.model.Order;
 import com.homekitchen.backend.model.OrderItem;
 import com.homekitchen.backend.repository.OrderRepository;
@@ -33,5 +34,12 @@ public class OrderService {
 
     public List<Order> getAllOrders() {
         return orderRepository.findAll();
+    }
+
+    public Order updateStatus(Long id, String status) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new FoodException("Order not found"));
+                order.setStatus(status);
+                return orderRepository.save(order);
     }
 }

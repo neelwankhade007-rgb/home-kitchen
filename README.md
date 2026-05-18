@@ -1,35 +1,46 @@
 # Home Kitchen 🍳
 
-Home Kitchen is a professional full-stack cafe and restaurant management platform designed for snack bars, ice cream parlors, and small eateries. This application allows users to manage their menu efficiently for Dine-in and Takeaway services with a responsive React frontend and a robust Spring Boot backend.
+A full-stack food ordering platform for small eateries — snack bars, home kitchens, ice cream parlors, and cafes. Customers browse the menu and place orders; the admin manages the menu and tracks orders in real time.
 
 ---
 
 ## 🚀 Features
 
-- **Menu Management**: Add, view, update, and delete food items.
-- **Bulk Actions**: Support for deleting all items at once.
-- **Categorization**: Group food items by category for easier navigation.
-- **Validation**: Server-side validation and exception handling for reliable data processing.
-- **Responsive Design**: Modern UI built with React and Vanilla CSS.
-- **Dine-in & Takeaway Focus**: Optimized for in-shop ordering and management.
-- **Persistent Storage**: Full integration with MySQL database via Spring Data JPA.
+- **🛒 Cart & Ordering** — Add items, adjust quantities, and place orders with a smooth checkout drawer
+- **📂 Categorized Menu** — Browse by category with pill filters and emoji section headers
+- **🔒 JWT Admin Auth** — Secure login with token-based authentication (no plain passwords)
+- **📋 Live Orders Panel** — Admin sees incoming orders, confirms them, and marks them done
+- **⚡ Full CRUD API** — Complete REST API for food items and orders
+- **✅ Validations** — Input checks on both client and server with custom exception handling
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: [React](https://reactjs.org/) (Vite), Axios, Vanilla CSS
-- **Backend**: [Spring Boot](https://spring.io/projects/spring-boot) (Java 17)
-- **Database**: [MySQL](https://www.mysql.com/)
-- **Build Tools**: Maven, npm
+### Frontend
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=FFD62B)
+![React Router](https://img.shields.io/badge/React_Router-CA4245?style=for-the-badge&logo=react-router&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+
+### Backend & Database
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)
+![Java 17](https://img.shields.io/badge/Java_17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Hibernate](https://img.shields.io/badge/Hibernate-59666C?style=for-the-badge&logo=hibernate&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-00758F?style=for-the-badge&logo=mysql&logoColor=white)
+
+### Tools
+![Maven](https://img.shields.io/badge/Maven-C71A36?style=for-the-badge&logo=apache-maven&logoColor=white)
+![NPM](https://img.shields.io/badge/NPM-%23CB3837.svg?style=for-the-badge&logo=npm&logoColor=white)
+![Git](https://img.shields.io/badge/GIT-E44C30?style=for-the-badge&logo=git&logoColor=white)
 
 ---
 
-## 🏛️ Project Architecture
+## 🏛️ Architecture
 
 ```mermaid
 graph LR
-    A[React Frontend] -- HTTP/Axios --> B[Spring Boot REST API]
+    A[React Frontend] -- HTTP + JWT --> B[Spring Boot REST API]
     B -- JPA/Hibernate --> C[MySQL Database]
 ```
 
@@ -39,137 +50,143 @@ graph LR
 
 ```text
 home-kitchen/
-├── backend/                # Spring Boot application
-│   ├── src/main/java/      # Java source code
-│   │   └── com/homekitchen/backend/
-│   │       ├── controller/ # REST Endpoints
-│   │       ├── dto/        # Data Transfer Objects
-│   │       ├── exception/  # Global Exception Handling
-│   │       ├── model/      # JPA Entities
-│   │       ├── repository/ # Data Access Layer
-│   │       └── service/    # Business Logic
-│   ├── src/main/resources/ # Configuration (application.properties)
-│   └── pom.xml             # Maven dependencies
-├── frontend/               # React application
-│   ├── src/
-│   │   ├── assets/         # Static images/icons
-│   │   ├── App.jsx         # Main application logic
-│   │   └── main.jsx        # Entry point
-│   ├── index.html
-│   └── package.json        # Node dependencies
+├── backend/
+│   └── src/main/java/com/homekitchen/backend/
+│       ├── controller/
+│       │   ├── AuthController.java       # POST /auth/login → JWT token
+│       │   ├── HomeController.java       # Food item CRUD
+│       │   └── OrderController.java      # Order placement & status updates
+│       ├── dto/
+│       │   └── ApiResponse.java
+│       ├── exception/
+│       │   ├── FoodException.java
+│       │   └── GlobalExceptionHandler.java
+│       ├── model/
+│       │   ├── FoodItem.java
+│       │   ├── Order.java
+│       │   └── OrderItem.java
+│       ├── repository/
+│       │   ├── FoodItemRepository.java
+│       │   ├── OrderItemRepository.java
+│       │   └── OrderRepository.java
+│       ├── service/
+│       │   ├── FoodService.java
+│       │   └── OrderService.java
+│       └── util/
+│           └── JwtUtil.java              # Token generation & validation
+├── frontend/
+│   └── src/
+│       ├── pages/
+│       │   ├── AdminPage.jsx             # Login + Menu + Orders tabs
+│       │   └── CustomerPage.jsx          # Menu browsing + cart + checkout
+│       ├── Admin.css
+│       ├── App.css
+│       ├── App.jsx
+│       └── main.jsx
 └── README.md
 ```
 
 ---
 
-## ⚙️ Setup & Installation
+## ⚙️ Local Setup
 
-### 1. Database Setup
+### Prerequisites
+- Java 17+
+- Node 18+
+- MySQL running locally
 
-1. Open your MySQL client (Command Line or Workbench).
-2. Create a new database:
-   ```sql
-   CREATE DATABASE home_kitchen;
-   ```
-3. Update the credentials in `backend/src/main/resources/application.properties`:
-   ```properties
-   spring.datasource.username=YOUR_USERNAME
-   spring.datasource.password=YOUR_PASSWORD
-   ```
+### 1. Database
+```sql
+CREATE DATABASE home_kitchen;
+```
 
-### 2. Backend Setup
+Then update `backend/src/main/resources/application.properties`:
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/home_kitchen
+spring.datasource.username=YOUR_USERNAME
+spring.datasource.password=YOUR_PASSWORD
+spring.jpa.hibernate.ddl-auto=update
+```
 
-1. Navigate to the backend directory:
-   ```powershell
-   cd backend
-   ```
-2. Run the application using the Maven wrapper:
-   ```powershell
-   .\mvnw.cmd spring-boot:run
-   ```
+### 2. Backend
+```bash
+cd backend
 
-### 3. Frontend Setup
+# Windows
+.\mvnw.cmd spring-boot:run
 
-1. Navigate to the frontend directory:
-   ```powershell
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+# Mac / Linux
+./mvnw spring-boot:run
+```
+Runs on `http://localhost:8080`
 
----
+### 3. Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Runs on `http://localhost:5173`
 
-## 🔌 API Endpoints
+### 4. Admin Login
+Go to `http://localhost:5173/admin`
 
-| Method   | Endpoint                     | Description                  |
-| :------- | :--------------------------- | :--------------------------- |
-| `GET`    | `/foods`                     | Fetch all food items         |
-| `GET`    | `/foods/category/{category}` | Fetch items by category      |
-| `POST`   | `/foods`                     | Add a new food item          |
-| `PUT`    | `/foods/{id}`                | Update an existing food item |
-| `DELETE` | `/foods/{id}`                | Delete a specific food item  |
-| `DELETE` | `/foods`                     | Delete all food items        |
+| Field | Value |
+|-------|-------|
+| Username | `admin` |
+| Password | `admin123` |
 
 ---
 
-## ⌨️ Useful Commands
+## 🔌 API Reference
 
-| Command                         | Description                                |
-| :------------------------------ | :----------------------------------------- |
-| `.\mvnw.cmd spring-boot:run`    | Start the backend (Windows)                |
-| `./mvnw spring-boot:run`        | Start the backend (Linux/Mac)              |
-| `npm run dev`                   | Start the frontend development server      |
-| `netstat -ano \| findstr :8080` | Check if port 8080 is in use               |
-| `taskkill /PID <PID> /F`        | Force kill a process (e.g., port conflict) |
-| `git status`                    | Check current git branch status            |
+### Auth
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/auth/login` | Login and receive a JWT token |
+
+### Food Items (`/foods`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/foods` | Get all food items |
+| `GET` | `/foods/category/{category}` | Filter by category |
+| `POST` | `/foods` | Add a new item |
+| `PUT` | `/foods/{id}` | Update an item |
+| `DELETE` | `/foods/{id}` | Delete an item |
+
+### Orders (`/orders`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/orders` | Place a new order |
+| `GET` | `/orders` | Get all orders |
+| `PATCH` | `/orders/{id}/status` | Update order status (`PENDING` → `CONFIRMED` → `DONE`) |
 
 ---
 
 ## 🛠️ Troubleshooting
 
-### 🛑 Port 8080 Already in Use
+**Port 8080 already in use (Windows)**
+```bash
+netstat -ano | findstr :8080
+taskkill /PID <PID> /F
+```
 
-If the backend fails to start because port 8080 is busy:
+**CORS errors** — Make sure both `HomeController.java`, `OrderController.java`, and `AuthController.java` have:
+```java
+@CrossOrigin(origins = "http://localhost:5173/")
+```
 
-1. Run `netstat -ano | findstr :8080` to find the Process ID (PID).
-2. Run `taskkill /PID <PID> /F` replacing `<PID>` with the actual number.
-
-### ☕ Java Version Mismatch
-
-This project requires **JDK 17**. If you see a compilation error:
-
-- Run `java -version` and `javac -version`.
-- Ensure your `JAVA_HOME` environment variable points to a JDK 17+ installation.
-
-### 🌐 CORS Errors
-
-The backend is configured to allow requests from `http://localhost:5173`. If your frontend runs on a different port, update the `@CrossOrigin` annotation in `HomeController.java`.
-
-### 📦 Maven Wrapper Issues
-
-If `.\mvnw.cmd` fails:
-
-- Ensure you have a stable internet connection for the first run (to download Maven).
-- Alternatively, if you have Maven installed globally, use `mvn spring-boot:run`.
-
-### 🗄️ MySQL Connection Issues
-
-- Verify that the MySQL service is running.
-- Ensure the database name `home_kitchen` matches exactly in both MySQL and `application.properties`.
+**Wrong Java version** — Backend requires JDK 17+. Check with:
+```bash
+java -version
+```
 
 ---
 
-## 🔮 Future Improvements
+## 🔮 Roadmap
 
-- [ ] **User Authentication**: Implement JWT-based login for admins.
-- [ ] **Image Uploads**: Allow users to upload photos for food items.
-- [ ] **Table Management**: Add a module for managing dine-in tables and KOT.
-- [ ] **Dark Mode**: Enhance the UI with a toggleable dark theme.
-
----
+- [ ] Move admin credentials to environment variables
+- [ ] JWT filter to protect all admin backend routes
+- [ ] Restaurant open/closed toggle
+- [ ] Dark mode
+- [ ] Image uploads for menu items (AWS S3 or Cloudinary)

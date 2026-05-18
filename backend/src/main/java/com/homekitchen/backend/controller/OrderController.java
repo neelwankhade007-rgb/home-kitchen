@@ -2,8 +2,11 @@ package com.homekitchen.backend.controller;
 
 import com.homekitchen.backend.model.Order;
 import com.homekitchen.backend.service.OrderService;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:5173/")
@@ -24,5 +27,10 @@ public class OrderController {
     @GetMapping
     public List<Order> getAllOrders() {
         return orderService.getAllOrders();
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Order> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(orderService.updateStatus(id, body.get("status")));
     }
 }
