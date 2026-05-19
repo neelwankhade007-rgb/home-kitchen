@@ -36,7 +36,7 @@ function LoginGate({ onLogin }) {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("http://localhost:8080/auth/login", {
+      const res = await fetch("http://localhost:8081/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -111,7 +111,7 @@ function MenuTab({ token }) {
 
   const fetchFoods = () => {
     setLoading(true);
-    fetch("http://localhost:8080/foods", { headers: authHeaders })
+    fetch("http://localhost:8081/foods", { headers: memoAuthHeaders })
       .then(r => r.json())
       .then(data => { setFoods(data); setLoading(false); })
       .catch(() => setLoading(false));
@@ -119,7 +119,7 @@ function MenuTab({ token }) {
 
   const fetchFoodsCb = useCallback(() => {
     setLoading(true);
-    return fetch("http://localhost:8080/foods", { headers: memoAuthHeaders })
+    return fetch("http://localhost:8081/foods", { headers: memoAuthHeaders })
       .then(r => r.json())
       .then(data => { setFoods(data); setLoading(false); })
       .catch(() => setLoading(false));
@@ -135,7 +135,7 @@ function MenuTab({ token }) {
   const handleAdd = async () => {
     if (!form.name.trim()) return showMsg("error", "Name is required.");
     if (!form.price || isNaN(form.price)) return showMsg("error", "Valid price required.");
-    const res = await fetch("http://localhost:8080/foods", {
+    const res = await fetch("http://localhost:8081/foods", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ ...form, price: parseFloat(form.price) }),
@@ -153,7 +153,7 @@ function MenuTab({ token }) {
   };
 
   const saveEdit = async (id) => {
-    const res = await fetch(`http://localhost:8080/foods/${id}`, {
+    const res = await fetch(`http://localhost:8081/foods/${id}`, {
       method: "PUT",
       headers: authHeaders,
       body: JSON.stringify({ ...editData, price: parseFloat(editData.price) }),
@@ -162,7 +162,7 @@ function MenuTab({ token }) {
   };
 
   const deleteFood = async (id) => {
-    await fetch(`http://localhost:8080/foods/${id}`, { method: "DELETE", headers: authHeaders });
+    await fetch(`http://localhost:8081/foods/${id}`, { method: "DELETE", headers: authHeaders });
     fetchFoods();
   };
 
@@ -288,7 +288,7 @@ function OrdersTab({ token }) {
   }), [token]);
   const fetchOrdersCb = useCallback(() => {
     setLoading(true);
-    return fetch("http://localhost:8080/orders", { headers: memoAuthHeaders })
+    return fetch("http://localhost:8081/orders", { headers: memoAuthHeaders })
       .then(r => r.json())
       .then(data => {
         const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -309,7 +309,7 @@ function OrdersTab({ token }) {
 
     const connect = () => {
       // note: SSE endpoint currently unauthenticated; secure later if needed
-      es = new EventSource("http://localhost:8080/orders/stream");
+      es = new EventSource("http://localhost:8081/orders/stream");
       setConnectionStatus("connecting");
 
       es.addEventListener("open", () => {
@@ -351,7 +351,7 @@ function OrdersTab({ token }) {
 
   const changeStatus = async (id, status) => {
     setUpdating(id);
-    await fetch(`http://localhost:8080/orders/${id}/status`, {
+    await fetch(`http://localhost:8081/orders/${id}/status`, {
       method: "PATCH",
       headers: authHeaders,
       body: JSON.stringify({ status }),
@@ -363,7 +363,7 @@ function OrdersTab({ token }) {
   const deleteOrder = async (id) => {
     setUpdating(id);
     try {
-      await fetch(`http://localhost:8080/orders/${id}`, {
+      await fetch(`http://localhost:8081/orders/${id}`, {
         method: "DELETE",
         headers: authHeaders,
       });
@@ -378,7 +378,7 @@ function OrdersTab({ token }) {
   const deleteCompletedOrders = async () => {
     setLoading(true);
     try {
-      await fetch("http://localhost:8080/orders/completed", {
+      await fetch("http://localhost:8081/orders/completed", {
         method: "DELETE",
         headers: authHeaders,
       });
@@ -392,7 +392,7 @@ function OrdersTab({ token }) {
   const clearAllOrders = async () => {
     setLoading(true);
     try {
-      await fetch("http://localhost:8080/orders", {
+      await fetch("http://localhost:8081/orders", {
         method: "DELETE",
         headers: authHeaders,
       });

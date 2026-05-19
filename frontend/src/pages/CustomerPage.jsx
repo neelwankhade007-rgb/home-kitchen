@@ -29,7 +29,7 @@ export default function CustomerPage() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8080/foods")
+      .get("http://localhost:8081/foods")
       .then((res) => {
         setFoods(res.data);
         setLoading(false);
@@ -98,7 +98,7 @@ export default function CustomerPage() {
       })),
     };
 
-    axios.post("http://localhost:8080/orders", order)
+    axios.post("http://localhost:8081/orders", order)
       .then(() => {
         setCart({});
         setCartOpen(false);
