@@ -148,7 +148,6 @@ function MenuTab({ token }) {
   };
 
   const deleteFood = async (id) => {
-    if (!confirm("Delete this item?")) return;
     await fetch(`http://localhost:8080/foods/${id}`, { method: "DELETE", headers: authHeaders });
     fetchFoods();
   };
@@ -298,18 +297,79 @@ function OrdersTab({ token }) {
     setUpdating(null);
   };
 
+  const deleteOrder = async (id) => {
+    setUpdating(id);
+    try {
+      await fetch(`http://localhost:8080/orders/${id}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      await fetchOrders();
+    } catch (e) {
+      console.error("Failed to delete order", e);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const deleteCompletedOrders = async () => {
+    setLoading(true);
+    try {
+      await fetch("http://localhost:8080/orders/completed", {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      await fetchOrders();
+    } catch (e) {
+      console.error("Failed to delete completed orders", e);
+      setLoading(false);
+    }
+  };
+
+  const clearAllOrders = async () => {
+    setLoading(true);
+    try {
+      await fetch("http://localhost:8080/orders", {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      await fetchOrders();
+    } catch (e) {
+      console.error("Failed to clear all orders", e);
+      setLoading(false);
+    }
+  };
+
   const pendingCount = orders.filter(o => o.status === "PENDING").length;
 
   return (
     <div className="admin-card">
       <div className="admin-section-header">
         <div className="admin-section-title">Incoming Orders</div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {pendingCount > 0 && (
             <span className="order-pending-badge">{pendingCount} new</span>
           )}
           <span className="admin-count">{orders.length} total</span>
           <button className="btn-edit" onClick={fetchOrders}>↻ Refresh</button>
+          {orders.length > 0 && (
+            <>
+              <button 
+                className="btn-delete" 
+                onClick={deleteCompletedOrders}
+                disabled={orders.filter(o => o.status === "DONE").length === 0}
+                style={{
+                  opacity: orders.filter(o => o.status === "DONE").length === 0 ? 0.5 : 1,
+                  cursor: orders.filter(o => o.status === "DONE").length === 0 ? "not-allowed" : "pointer"
+                }}
+              >
+                🧹 Delete Completed
+              </button>
+              <button className="btn-delete" onClick={clearAllOrders}>
+                🗑️ Clear All
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -346,24 +406,34 @@ function OrdersTab({ token }) {
                 ))}
               </div>
 
-              <div className="order-card-footer">
-                {order.status === "PENDING" && (
-                  <button className="order-btn order-btn-confirm"
-                    disabled={updating === order.id}
-                    onClick={() => changeStatus(order.id, "CONFIRMED")}>
-                    {updating === order.id ? "..." : "✓ Confirm"}
-                  </button>
-                )}
-                {order.status === "CONFIRMED" && (
-                  <button className="order-btn order-btn-done"
-                    disabled={updating === order.id}
-                    onClick={() => changeStatus(order.id, "DONE")}>
-                    {updating === order.id ? "..." : "🏁 Mark Done"}
-                  </button>
-                )}
-                {order.status === "DONE" && (
-                  <span className="order-done-label">✓ Completed</span>
-                )}
+              <div className="order-card-footer" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                <div>
+                  {order.status === "PENDING" && (
+                    <button className="order-btn order-btn-confirm"
+                      disabled={updating === order.id}
+                      onClick={() => changeStatus(order.id, "CONFIRMED")}>
+                      {updating === order.id ? "..." : "✓ Confirm"}
+                    </button>
+                  )}
+                  {order.status === "CONFIRMED" && (
+                    <button className="order-btn order-btn-done"
+                      disabled={updating === order.id}
+                      onClick={() => changeStatus(order.id, "DONE")}>
+                      {updating === order.id ? "..." : "🏁 Mark Done"}
+                    </button>
+                  )}
+                  {order.status === "DONE" && (
+                    <span className="order-done-label">✓ Completed</span>
+                  )}
+                </div>
+                <button 
+                  className="btn-delete" 
+                  disabled={updating === order.id}
+                  onClick={() => deleteOrder(order.id)}
+                  style={{ padding: "6px 12px", fontSize: "12px" }}
+                >
+                  🗑️ Delete
+                </button>
               </div>
             </div>
           ))}
