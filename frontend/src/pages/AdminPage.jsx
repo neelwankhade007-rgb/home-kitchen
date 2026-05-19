@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import "../Admin.css";
 
 // ── Helpers ──────────────────────────────────────────────
@@ -102,6 +102,12 @@ function MenuTab({ token }) {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${token}`,
   };
+  
+  const memoAuthHeaders = useMemo(() => ({
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+  }), [token]);
+  
 
   const fetchFoods = () => {
     setLoading(true);
@@ -111,7 +117,15 @@ function MenuTab({ token }) {
       .catch(() => setLoading(false));
   };
 
-  useEffect(() => { fetchFoods(); }, []);
+  const fetchFoodsCb = useCallback(() => {
+    setLoading(true);
+    return fetch("http://localhost:8080/foods", { headers: memoAuthHeaders })
+      .then(r => r.json())
+      .then(data => { setFoods(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [memoAuthHeaders]);
+
+  useEffect(() => { (async () => { await fetchFoodsCb(); })(); }, [fetchFoodsCb]);
 
   const showMsg = (type, text) => {
     setMsg({ type, text });
@@ -262,15 +276,19 @@ function OrdersTab({ token }) {
   const [orders, setOrders]     = useState([]);
   const [loading, setLoading]   = useState(true);
   const [updating, setUpdating] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState("connecting");
 
   const authHeaders = {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${token}`,
   };
-
-  const fetchOrders = () => {
+  const memoAuthHeaders = useMemo(() => ({
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+  }), [token]);
+  const fetchOrdersCb = useCallback(() => {
     setLoading(true);
-    fetch("http://localhost:8080/orders", { headers: authHeaders })
+    return fetch("http://localhost:8080/orders", { headers: memoAuthHeaders })
       .then(r => r.json())
       .then(data => {
         const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -278,13 +296,58 @@ function OrdersTab({ token }) {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  };
+  }, [memoAuthHeaders]);
+
+  const fetchOrders = fetchOrdersCb;
 
   useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 15000);
-    return () => clearInterval(interval);
-  }, []);
+    (async () => { await fetchOrdersCb(); })();
+
+    let es = null;
+    let retryCount = 0;
+    let reconnectTimer = null;
+
+    const connect = () => {
+      // note: SSE endpoint currently unauthenticated; secure later if needed
+      es = new EventSource("http://localhost:8080/orders/stream");
+      setConnectionStatus("connecting");
+
+      es.addEventListener("open", () => {
+        retryCount = 0;
+        setConnectionStatus("connected");
+      });
+
+      es.addEventListener("orderPlaced", (e) => {
+        try {
+          const order = JSON.parse(e.data);
+          setOrders(prev => {
+            if (prev.some(o => o.id === order.id)) return prev;
+            return [order, ...prev];
+          });
+        } catch (err) {
+          console.error("Failed to parse SSE order", err);
+          // fallback: refetch full list
+          fetchOrdersCb();
+        }
+      });
+
+      es.addEventListener("error", () => {
+        setConnectionStatus("disconnected");
+        if (es) es.close();
+        // exponential backoff reconnect
+        retryCount += 1;
+        const delay = Math.min(30000, 1000 * Math.pow(2, Math.min(retryCount, 6)));
+        reconnectTimer = setTimeout(connect, delay);
+      });
+    };
+
+    connect();
+
+    return () => {
+      if (es) es.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  }, [fetchOrdersCb]);
 
   const changeStatus = async (id, status) => {
     setUpdating(id);
@@ -347,6 +410,9 @@ function OrdersTab({ token }) {
       <div className="admin-section-header">
         <div className="admin-section-title">Incoming Orders</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ConnectionIndicator status={connectionStatus} />
+          </div>
           {pendingCount > 0 && (
             <span className="order-pending-badge">{pendingCount} new</span>
           )}
@@ -475,6 +541,17 @@ export default function AdminPage() {
         {tab === "menu"   && <MenuTab token={token} />}
         {tab === "orders" && <OrdersTab token={token} />}
       </div>
+    </div>
+  );
+}
+
+function ConnectionIndicator({ status }) {
+  const color = status === "connected" ? "#22c55e" : status === "connecting" ? "#f59e0b" : "#ef4444";
+  const label = status === "connected" ? "Live" : status === "connecting" ? "Connecting" : "Offline";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ width: 10, height: 10, borderRadius: 10, background: color }} />
+      <div style={{ fontSize: 12, color: "#666" }}>{label}</div>
     </div>
   );
 }
