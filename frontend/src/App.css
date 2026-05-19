@@ -477,3 +477,42 @@ button { font-family: var(--font-body); cursor: pointer; border: none; backgroun
   z-index: 100;
   box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
+
+/* ══════════════════════
+   CART CUSTOMER FIELDS
+══════════════════════ */
+.cart-section-label {
+  padding: 14px 20px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-light);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.cart-customer-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 20px 16px;
+}
+.cart-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.18s;
+}
+.cart-input:focus { border-color: var(--brand); }
+.cart-input-error { border-color: #dc2626; }
+.cart-form-error {
+  font-size: 13px;
+  color: #dc2626;
+  padding: 0 2px;
+}

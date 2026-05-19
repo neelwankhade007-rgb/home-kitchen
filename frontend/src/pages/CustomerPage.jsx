@@ -22,6 +22,9 @@ export default function CustomerPage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
+  const [formError, setFormError] = useState("");
   const sectionRefs = useRef({});
 
   useEffect(() => {
@@ -69,8 +72,18 @@ export default function CustomerPage() {
   };
 
   const placeOrder = () => {
+    if (!customerName.trim()) {
+      setFormError("Please enter your name.");
+      return;
+    }
+    if (!/^\d{10}$/.test(contactNumber.trim())) {
+      setFormError("Please enter a valid 10-digit contact number.");
+      return;
+    }
+    setFormError("");
+
     const order = {
-      customerName: "Customer",
+      customerName: customerName.trim(),
       items: cartItems.map(({ food, qty }) => ({
         foodName: food.name,
         price: food.price,
@@ -82,6 +95,8 @@ export default function CustomerPage() {
       .then(() => {
         setCart({});
         setCartOpen(false);
+        setCustomerName("");
+        setContactNumber("");
         setOrderPlaced(true);
         setTimeout(() => setOrderPlaced(false), 4000);
       })
@@ -215,11 +230,17 @@ export default function CustomerPage() {
       {cartOpen && (
         <div className="overlay" onClick={() => setCartOpen(false)}>
           <div className="cart-drawer" onClick={(e) => e.stopPropagation()}>
+
+            {/* Header */}
             <div className="cart-header">
               <h3 className="cart-title">Your Order</h3>
               <button className="cart-close" onClick={() => setCartOpen(false)}>✕</button>
             </div>
+
+            {/* Scrollable area: items + customer fields */}
             <div className="cart-items">
+
+              {/* Cart items */}
               {cartItems.map(({ food, qty }) => (
                 <div className="cart-item" key={food.id}>
                   <div className="cart-item-info">
@@ -233,7 +254,33 @@ export default function CustomerPage() {
                   </div>
                 </div>
               ))}
+
+              {/* Divider */}
+              <div className="cart-section-label">Your Details</div>
+
+              {/* Name + Contact fields */}
+              <div className="cart-customer-fields">
+                <input
+                  className={`cart-input ${formError && !customerName.trim() ? "cart-input-error" : ""}`}
+                  type="text"
+                  placeholder="Your name"
+                  value={customerName}
+                  onChange={(e) => { setCustomerName(e.target.value); setFormError(""); }}
+                />
+                <input
+                  className={`cart-input ${formError && !/^\d{10}$/.test(contactNumber.trim()) ? "cart-input-error" : ""}`}
+                  type="tel"
+                  placeholder="Contact number (10 digits)"
+                  value={contactNumber}
+                  maxLength={10}
+                  onChange={(e) => { setContactNumber(e.target.value.replace(/\D/g, "")); setFormError(""); }}
+                />
+                {formError && <p className="cart-form-error">{formError}</p>}
+              </div>
+
             </div>
+
+            {/* Footer: total + button */}
             <div className="cart-footer">
               <div className="cart-total-row">
                 <span>Total</span>
@@ -242,8 +289,8 @@ export default function CustomerPage() {
               <button className="place-order-btn" onClick={placeOrder}>
                 Place Order · ₹{cartTotal}
               </button>
-              <p className="cart-note">Order placement coming in Step 3 🚀</p>
             </div>
+
           </div>
         </div>
       )}
