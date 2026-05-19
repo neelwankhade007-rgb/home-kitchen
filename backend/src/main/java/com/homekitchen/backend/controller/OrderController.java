@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:5173/")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5173/"}, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH, RequestMethod.OPTIONS})
 @RestController
 @RequestMapping("/orders")
 public class OrderController {
@@ -32,5 +32,23 @@ public class OrderController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<Order> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(orderService.updateStatus(id, body.get("status")));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, String>> deleteOrder(@PathVariable Long id) {
+        orderService.deleteOrder(id);
+        return ResponseEntity.ok(Map.of("message", "Order deleted successfully"));
+    }
+
+    @DeleteMapping("/completed")
+    public ResponseEntity<Map<String, String>> deleteCompletedOrders() {
+        orderService.deleteCompletedOrders();
+        return ResponseEntity.ok(Map.of("message", "Completed orders deleted successfully"));
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Map<String, String>> clearAllOrders() {
+        orderService.clearAllOrders();
+        return ResponseEntity.ok(Map.of("message", "All orders cleared successfully"));
     }
 }

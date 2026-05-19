@@ -42,4 +42,22 @@ public class OrderService {
                 order.setStatus(status);
                 return orderRepository.save(order);
     }
+
+    public void deleteOrder(Long id) {
+        if (!orderRepository.existsById(id)) {
+            throw new FoodException("Order not found");
+        }
+        orderRepository.deleteById(id);
+    }
+
+    public void deleteCompletedOrders() {
+        List<Order> completed = orderRepository.findAll().stream()
+                .filter(o -> "DONE".equalsIgnoreCase(o.getStatus()))
+                .collect(java.util.stream.Collectors.toList());
+        orderRepository.deleteAll(completed);
+    }
+
+    public void clearAllOrders() {
+        orderRepository.deleteAll();
+    }
 }
