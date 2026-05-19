@@ -172,7 +172,7 @@ button { font-family: var(--font-body); cursor: pointer; border: none; backgroun
   align-items: flex-start;
 }
 .food-card:hover { background: var(--surface); }
-.food-card-soldout { opacity: 0.5; }
+.food-card-soldout { opacity: 0.6; filter: grayscale(100%); }
 
 .food-img {
   width: 72px;
@@ -220,7 +220,7 @@ button { font-family: var(--font-body); cursor: pointer; border: none; backgroun
   font-weight: 700;
   color: var(--brand);
 }
-.sold-out-label {
+.unavailable-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-light);

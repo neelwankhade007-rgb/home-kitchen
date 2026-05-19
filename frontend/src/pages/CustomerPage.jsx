@@ -29,7 +29,7 @@ export default function CustomerPage() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8080/foods")
+      .get("http://localhost:8081/foods")
       .then((res) => {
         setFoods(res.data);
         setLoading(false);
@@ -82,6 +82,13 @@ export default function CustomerPage() {
     }
     setFormError("");
 
+    // Prevent ordering items that are no longer available
+    const unavailable = cartItems.find(({ food }) => !food.available);
+    if (unavailable) {
+      setFormError(`Item '${unavailable.food.name}' is unavailable. Please remove it from your cart.`);
+      return;
+    }
+
     const order = {
       customerName: customerName.trim(),
       items: cartItems.map(({ food, qty }) => ({
@@ -91,7 +98,7 @@ export default function CustomerPage() {
       })),
     };
 
-    axios.post("http://localhost:8080/orders", order)
+    axios.post("http://localhost:8081/orders", order)
       .then(() => {
         setCart({});
         setCartOpen(false);
@@ -100,7 +107,10 @@ export default function CustomerPage() {
         setOrderPlaced(true);
         setTimeout(() => setOrderPlaced(false), 4000);
       })
-      .catch(() => alert("Failed to place order. Try again."));
+      .catch((err) => {
+        const msg = err?.response?.data?.message || err?.message || "Failed to place order. Try again.";
+        alert(msg);
+      });
   };
 
   return (
