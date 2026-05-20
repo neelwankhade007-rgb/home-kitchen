@@ -111,6 +111,7 @@ function MenuTab({ token }) {
       .catch(() => setLoading(false));
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { fetchFoods(); }, []);
 
   const showMsg = (type, text) => {
@@ -280,11 +281,13 @@ function OrdersTab({ token }) {
       .catch(() => setLoading(false));
   };
 
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
   useEffect(() => {
     fetchOrders();
     const interval = setInterval(fetchOrders, 15000);
     return () => clearInterval(interval);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const changeStatus = async (id, status) => {
     setUpdating(id);
