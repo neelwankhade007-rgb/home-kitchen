@@ -1,4 +1,4 @@
-Update summary — SSE admin updates
+Update summary — SSE admin updates and Customer page UI
 
 This branch contains changes to add Server-Sent Events (SSE) notifications for admin when new orders are placed, and frontend integration to use the SSE stream instead of polling.
 
