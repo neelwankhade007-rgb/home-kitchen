@@ -10,6 +10,7 @@ A full-stack food ordering platform for small eateries — snack bars, home kitc
 - **📂 Categorized Menu** — Browse by category with pill filters and emoji section headers
 - **🔒 JWT Admin Auth** — Secure login with token-based authentication (no plain passwords)
 - **📋 Live Orders Panel** — Admin sees incoming orders, confirms them, and marks them done
+- **📅 Daily Insights & Filtering** — Filter orders by date, view daily revenue, and see daily order numbers instead of database IDs
 - **⚡ Full CRUD API** — Complete REST API for food items and orders
 - **✅ Validations** — Input checks on both client and server with custom exception handling
 
@@ -160,6 +161,9 @@ Go to `http://localhost:5173/admin`
 | `POST` | `/orders` | Place a new order |
 | `GET` | `/orders` | Get all orders |
 | `PATCH` | `/orders/{id}/status` | Update order status (`PENDING` → `CONFIRMED` → `DONE`) |
+| `DELETE` | `/orders/{id}` | Delete a specific order |
+| `DELETE` | `/orders/completed` | Delete all completed orders |
+| `DELETE` | `/orders` | Clear all orders |
 
 ---
 
@@ -185,8 +189,6 @@ java -version
 
 ## 🔮 Roadmap
 
-- [ ] Move admin credentials to environment variables
-- [ ] JWT filter to protect all admin backend routes
 - [ ] Restaurant open/closed toggle
 - [ ] Dark mode
 - [ ] Image uploads for menu items (AWS S3 or Cloudinary)

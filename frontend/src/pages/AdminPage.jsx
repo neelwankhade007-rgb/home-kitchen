@@ -2,6 +2,25 @@ import { useState, useEffect } from "react";
 import "../Admin.css";
 
 // ── Helpers ──────────────────────────────────────────────
+function toDateString(date) {
+  // Returns "YYYY-MM-DD" in local time
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function todayString() {
+  return toDateString(new Date());
+}
+
+function formatDisplayDate(dateStr) {
+  if (!dateStr) return "";
+  const [y, m, d] = dateStr.split("-");
+  const date = new Date(+y, +m - 1, +d);
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+}
+
 function formatTime(iso) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -60,27 +79,20 @@ function LoginGate({ onLogin }) {
         <div className="gate-icon">🍽️</div>
         <div className="gate-title">Admin Login</div>
         <div className="gate-sub">Sign in to manage your kitchen</div>
-
         <input
           className={`gate-input ${error ? "gate-input-error" : ""}`}
-          type="text"
-          placeholder="Username"
-          value={username}
+          type="text" placeholder="Username" value={username}
           onChange={e => { setUsername(e.target.value); setError(""); }}
           onKeyDown={e => e.key === "Enter" && submit()}
           autoFocus
         />
         <input
           className={`gate-input ${error ? "gate-input-error" : ""}`}
-          type="password"
-          placeholder="Password"
-          value={password}
+          type="password" placeholder="Password" value={password}
           onChange={e => { setPassword(e.target.value); setError(""); }}
           onKeyDown={e => e.key === "Enter" && submit()}
         />
-
         {error && <div className="gate-error">{error}</div>}
-
         <button className="gate-btn" onClick={submit} disabled={loading}>
           {loading ? "Signing in..." : "Sign In"}
         </button>
@@ -111,7 +123,7 @@ function MenuTab({ token }) {
       .catch(() => setLoading(false));
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchFoods(); }, []);
 
   const showMsg = (type, text) => {
@@ -260,9 +272,10 @@ function MenuTab({ token }) {
 
 // ── Orders Tab ────────────────────────────────────────────
 function OrdersTab({ token }) {
-  const [orders, setOrders]     = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [updating, setUpdating] = useState(null);
+  const [orders, setOrders]       = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [updating, setUpdating]   = useState(null);
+  const [selectedDate, setSelectedDate] = useState(todayString());
 
   const authHeaders = {
     "Content-Type": "application/json",
@@ -281,13 +294,13 @@ function OrdersTab({ token }) {
       .catch(() => setLoading(false));
   };
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     fetchOrders();
     const interval = setInterval(fetchOrders, 15000);
     return () => clearInterval(interval);
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const changeStatus = async (id, status) => {
     setUpdating(id);
@@ -303,10 +316,7 @@ function OrdersTab({ token }) {
   const deleteOrder = async (id) => {
     setUpdating(id);
     try {
-      await fetch(`http://localhost:8080/orders/${id}`, {
-        method: "DELETE",
-        headers: authHeaders,
-      });
+      await fetch(`http://localhost:8080/orders/${id}`, { method: "DELETE", headers: authHeaders });
       await fetchOrders();
     } catch (e) {
       console.error("Failed to delete order", e);
@@ -318,10 +328,7 @@ function OrdersTab({ token }) {
   const deleteCompletedOrders = async () => {
     setLoading(true);
     try {
-      await fetch("http://localhost:8080/orders/completed", {
-        method: "DELETE",
-        headers: authHeaders,
-      });
+      await fetch("http://localhost:8080/orders/completed", { method: "DELETE", headers: authHeaders });
       await fetchOrders();
     } catch (e) {
       console.error("Failed to delete completed orders", e);
@@ -332,10 +339,7 @@ function OrdersTab({ token }) {
   const clearAllOrders = async () => {
     setLoading(true);
     try {
-      await fetch("http://localhost:8080/orders", {
-        method: "DELETE",
-        headers: authHeaders,
-      });
+      await fetch("http://localhost:8080/orders", { method: "DELETE", headers: authHeaders });
       await fetchOrders();
     } catch (e) {
       console.error("Failed to clear all orders", e);
@@ -343,53 +347,103 @@ function OrdersTab({ token }) {
     }
   };
 
-  const pendingCount = orders.filter(o => o.status === "PENDING").length;
+  // Filter orders by selected date (match on local date string)
+  const filteredOrders = orders.filter(order => {
+    if (!order.createdAt) return false;
+    return toDateString(new Date(order.createdAt)) === selectedDate;
+  });
+
+  const isToday = selectedDate === todayString();
+  const pendingCount  = filteredOrders.filter(o => o.status === "PENDING").length;
+  const revenue       = filteredOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+  const totalPending  = orders.filter(o => o.status === "PENDING").length;
 
   return (
     <div className="admin-card">
-      <div className="admin-section-header">
-        <div className="admin-section-title">Incoming Orders</div>
+
+      {/* ── Date Selector ── */}
+      <div className="date-filter-bar">
+        <div className="date-filter-left">
+          <span className="date-filter-icon">📅</span>
+          <span className="date-filter-label">Viewing orders for</span>
+          <input
+            className="date-filter-input"
+            type="date"
+            value={selectedDate}
+            max={todayString()}
+            onChange={e => setSelectedDate(e.target.value)}
+          />
+        </div>
+        {!isToday && (
+          <button className="today-pill" onClick={() => setSelectedDate(todayString())}>
+            ↩ Back to Today
+          </button>
+        )}
+        {isToday && (
+          <span className="today-chip">Today</span>
+        )}
+      </div>
+
+      {/* ── Day Summary ── */}
+      <div className="day-summary">
+        <div className="day-summary-card">
+          <span className="day-summary-label">Orders</span>
+          <span className="day-summary-val">{filteredOrders.length}</span>
+        </div>
+        <div className="day-summary-card">
+          <span className="day-summary-label">Revenue</span>
+          <span className="day-summary-val day-summary-green">₹{revenue.toFixed(0)}</span>
+        </div>
+        <div className="day-summary-card">
+          <span className="day-summary-label">Pending</span>
+          <span className="day-summary-val day-summary-amber">{pendingCount}</span>
+        </div>
+      </div>
+
+      {/* ── Section header ── */}
+      <div className="admin-section-header" style={{ marginBottom: 16 }}>
+        <div>
+          <div className="admin-section-title" style={{ marginBottom: 0 }}>
+            {formatDisplayDate(selectedDate)}
+          </div>
+        </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          {pendingCount > 0 && (
-            <span className="order-pending-badge">{pendingCount} new</span>
+          {totalPending > 0 && isToday && (
+            <span className="order-pending-badge">{totalPending} new</span>
           )}
-          <span className="admin-count">{orders.length} total</span>
+          <span className="admin-count">{filteredOrders.length} orders</span>
           <button className="btn-edit" onClick={fetchOrders}>↻ Refresh</button>
+          {orders.filter(o => o.status === "DONE").length > 0 && (
+            <button
+              className="btn-delete"
+              onClick={deleteCompletedOrders}
+            >
+              🧹 Delete Completed
+            </button>
+          )}
           {orders.length > 0 && (
-            <>
-              <button 
-                className="btn-delete" 
-                onClick={deleteCompletedOrders}
-                disabled={orders.filter(o => o.status === "DONE").length === 0}
-                style={{
-                  opacity: orders.filter(o => o.status === "DONE").length === 0 ? 0.5 : 1,
-                  cursor: orders.filter(o => o.status === "DONE").length === 0 ? "not-allowed" : "pointer"
-                }}
-              >
-                🧹 Delete Completed
-              </button>
-              <button className="btn-delete" onClick={clearAllOrders}>
-                🗑️ Clear All
-              </button>
-            </>
+            <button className="btn-delete" onClick={clearAllOrders}>
+              🗑️ Clear All
+            </button>
           )}
         </div>
       </div>
 
+      {/* ── Orders List ── */}
       {loading ? (
         <div className="admin-state"><div className="admin-spinner" /></div>
-      ) : orders.length === 0 ? (
+      ) : filteredOrders.length === 0 ? (
         <div className="admin-state">
           <span style={{ fontSize: 32 }}>📋</span>
-          No orders yet.
+          {isToday ? "No orders today yet." : `No orders on ${formatDisplayDate(selectedDate)}.`}
         </div>
       ) : (
         <div className="orders-list">
-          {orders.map(order => (
+          {filteredOrders.map(order => (
             <div key={order.id} className={`order-card order-card-${order.status?.toLowerCase()}`}>
               <div className="order-card-header">
                 <div className="order-card-left">
-                  <span className="order-id">#{order.id}</span>
+                  <span className="order-id">#{order.dailyNumber}</span>
                   <span className="order-customer">{order.customerName}</span>
                   <StatusBadge status={order.status} />
                 </div>
@@ -429,8 +483,8 @@ function OrdersTab({ token }) {
                     <span className="order-done-label">✓ Completed</span>
                   )}
                 </div>
-                <button 
-                  className="btn-delete" 
+                <button
+                  className="btn-delete"
                   disabled={updating === order.id}
                   onClick={() => deleteOrder(order.id)}
                   style={{ padding: "6px 12px", fontSize: "12px" }}

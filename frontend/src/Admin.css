@@ -554,3 +554,108 @@ input { font-family: var(--font-body); }
   .admin-btn-primary { width: 100%; text-align: center; }
   .order-card-header { flex-direction: column; align-items: flex-start; }
 }
+/* ══════════════════════
+   DATE FILTER BAR
+══════════════════════ */
+.date-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.date-filter-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.date-filter-icon { font-size: 16px; }
+.date-filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.date-filter-input {
+  padding: 6px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.18s;
+}
+.date-filter-input:focus { border-color: var(--brand); }
+
+.today-pill {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 100px;
+  border: 1.5px solid var(--brand);
+  color: var(--brand);
+  background: var(--brand-light);
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.today-pill:hover { background: var(--brand); color: #fff; }
+
+.today-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 100px;
+  background: var(--brand);
+  color: #fff;
+  letter-spacing: 0.03em;
+}
+
+/* ══════════════════════
+   DAY SUMMARY CARDS
+══════════════════════ */
+.day-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.day-summary-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.day-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-light);
+}
+.day-summary-val {
+  font-family: var(--font-head);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+}
+.day-summary-green { color: #15803d; }
+.day-summary-amber { color: #b45309; }
+
+@media (max-width: 640px) {
+  .date-filter-bar { flex-direction: column; align-items: flex-start; }
+  .day-summary { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .day-summary-val { font-size: 18px; }
+}

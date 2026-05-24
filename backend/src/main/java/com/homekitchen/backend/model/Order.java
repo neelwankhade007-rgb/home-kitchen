@@ -12,13 +12,23 @@ public class Order {
     private Long id;
     private String customerName;
     private double totalPrice;
-    private String status;  // PENDING, CONFIRMED, DONE
+    private String status; // PENDING, CONFIRMED, DONE
+    @Column(updatable = false)
     private LocalDateTime createdAt;
+    
+    @Column(updatable = false)
+    private Integer dailyNumber;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<OrderItem> items;
 
-    public Order() {}
+    public Order() {
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 
     // Getters and Setters
 
@@ -68,5 +78,13 @@ public class Order {
 
     public void setItems(List<OrderItem> items) {
         this.items = items;
+    }
+
+    public Integer getDailyNumber() {
+        return dailyNumber;
+    }
+
+    public void setDailyNumber(Integer dailyNumber) {
+        this.dailyNumber = dailyNumber;
     }
 }

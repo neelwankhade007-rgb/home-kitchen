@@ -6,6 +6,7 @@ import com.homekitchen.backend.model.OrderItem;
 import com.homekitchen.backend.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,7 +20,6 @@ public class OrderService {
 
     public Order placeOrder(Order order) {
         order.setStatus("PENDING");
-        order.setCreatedAt(LocalDateTime.now());
 
         double total = 0;
 
@@ -29,6 +29,12 @@ public class OrderService {
         }
 
         order.setTotalPrice(total);
+        
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay   = LocalDate.now().atTime(23, 59, 59);
+        int countToday = orderRepository.countByCreatedAtBetween(startOfDay, endOfDay);
+        order.setDailyNumber(countToday + 1);
+        
         return orderRepository.save(order);
     }
 
