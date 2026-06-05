@@ -58,7 +58,7 @@ public class OrderService {
 
     public void deleteCompletedOrders() {
         List<Order> completed = orderRepository.findAll().stream()
-                .filter(o -> "DONE".equalsIgnoreCase(o.getStatus()))
+                .filter(o -> "READY".equalsIgnoreCase(o.getStatus()))
                 .collect(java.util.stream.Collectors.toList());
         orderRepository.deleteAll(completed);
     }

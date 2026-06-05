@@ -659,3 +659,66 @@ input { font-family: var(--font-body); }
   .day-summary { grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .day-summary-val { font-size: 18px; }
 }
+
+/* ══════════════════════
+   ORDER TOKEN HERO
+══════════════════════ */
+.order-card-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.order-token-hero {
+  font-family: var(--font-head);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--brand);
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.order-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-customer {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ══════════════════════
+   VARIANT CHIP
+══════════════════════ */
+.variant-chip {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff1eb;
+  color: #e8622a;
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+/* ══════════════════════
+   READY STATUS
+══════════════════════ */
+.order-status-confirmed {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.order-card-ready {
+  border-left-color: #15803d;
+}
+
+.order-done-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #15803d;
+}

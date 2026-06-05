@@ -73,3 +73,9 @@ postman/
 
 # Documentation
 HELP.md
+PROJECT_FILES.md
+PROJECT_SUMMARY.md
+
+# Local dev tools
+.explyt/
+.gemini/

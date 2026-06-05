@@ -22,8 +22,8 @@ export default function CustomerPage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [tokenNumber, setTokenNumber] = useState(null);
   const [customerName, setCustomerName] = useState("");
-  const [contactNumber, setContactNumber] = useState("");
   const [formError, setFormError] = useState("");
   const sectionRefs = useRef({});
 
@@ -44,24 +44,66 @@ export default function CustomerPage() {
     return acc;
   }, {});
 
+  const variantMap = {};
+  foods.forEach(food => {
+    food.variants?.forEach(variant => {
+      variantMap[variant.id] = {
+        ...variant,
+        foodName: food.name,
+        foodCategory: food.category
+      };
+    });
+  });
+
   const cartItems = Object.entries(cart)
     .filter(([, qty]) => qty > 0)
-    .map(([id, qty]) => {
-      const food = foods.find((f) => String(f.id) === id);
-      return { food, qty };
-    });
+    .map(([key, qty]) => {
+      if (key.startsWith("variant-")) {
+        const variantId = key.replace("variant-", "");
+        const variant = variantMap[variantId];
+        if (variant) {
+          return {
+            key,
+            id: variant.id,
+            name: `${variant.foodName} (${variant.label})`,
+            price: variant.price,
+            qty,
+            foodName: variant.foodName,
+            variantName: variant.label,
+            unitPrice: variant.price
+          };
+        }
+      } else if (key.startsWith("food-")) {
+        const foodId = key.replace("food-", "");
+        const food = foods.find(f => String(f.id) === foodId);
+        if (food) {
+          return {
+            key,
+            id: food.id,
+            name: food.name,
+            price: food.basePrice,
+            qty,
+            foodName: food.name,
+            variantName: null,
+            unitPrice: food.basePrice
+          };
+        }
+      }
+      return null;
+    })
+    .filter(Boolean);
 
-  const cartTotal = cartItems.reduce((sum, { food, qty }) => sum + food.price * qty, 0);
-  const cartCount = cartItems.reduce((sum, { qty }) => sum + qty, 0);
+  const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const cartCount = cartItems.reduce((sum, item) => sum + item.qty, 0);
 
-  const addToCart = (id) => {
-    setCart((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+  const addToCart = (key) => {
+    setCart((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
   };
 
-  const removeFromCart = (id) => {
+  const removeFromCart = (key) => {
     setCart((prev) => {
-      const next = { ...prev, [id]: (prev[id] || 1) - 1 };
-      if (next[id] <= 0) delete next[id];
+      const next = { ...prev, [key]: (prev[key] || 1) - 1 };
+      if (next[key] <= 0) delete next[key];
       return next;
     });
   };
@@ -76,29 +118,32 @@ export default function CustomerPage() {
       setFormError("Please enter your name.");
       return;
     }
-    if (!/^\d{10}$/.test(contactNumber.trim())) {
-      setFormError("Please enter a valid 10-digit contact number.");
-      return;
-    }
     setFormError("");
 
     const order = {
       customerName: customerName.trim(),
-      items: cartItems.map(({ food, qty }) => ({
-        foodName: food.name,
-        price: food.price,
-        quantity: qty,
+      items: cartItems.map((item) => ({
+        foodName: item.foodName,
+        variantName: item.variantName,
+        price: item.unitPrice,
+        quantity: item.qty,
       })),
     };
 
     axios.post("http://localhost:8080/orders", order)
-      .then(() => {
+      .then((res) => {
+
+        setTokenNumber(res.data.dailyNumber);
+
         setCart({});
         setCartOpen(false);
         setCustomerName("");
-        setContactNumber("");
+
         setOrderPlaced(true);
-        setTimeout(() => setOrderPlaced(false), 4000);
+
+        setTimeout(() => {
+          setOrderPlaced(false);
+        }, 5000);
       })
       .catch(() => alert("Failed to place order. Try again."));
   };
@@ -166,7 +211,6 @@ export default function CustomerPage() {
 
                 <div className="food-list">
                   {grouped[cat].map((food) => {
-                    const qty = cart[food.id] || 0;
                     const soldOut = !food.available;
                     return (
                       <div className={`food-card ${soldOut ? "food-card-soldout" : ""}`} key={food.id}>
@@ -178,26 +222,52 @@ export default function CustomerPage() {
                           {food.description && (
                             <p className="food-desc">{food.description}</p>
                           )}
-                          <div className="food-bottom">
-                            {soldOut ? (
-                              <span className="sold-out-label">Sold out</span>
-                            ) : (
-                              <span className="food-price">₹{food.price}</span>
-                            )}
-                            {!soldOut && (
-                              qty === 0 ? (
-                                <button className="add-btn" onClick={() => addToCart(food.id)}>
-                                  + Add
-                                </button>
-                              ) : (
-                                <div className="counter">
-                                  <button className="counter-btn" onClick={() => removeFromCart(food.id)}>−</button>
-                                  <span className="counter-num">{qty}</span>
-                                  <button className="counter-btn" onClick={() => addToCart(food.id)}>+</button>
-                                </div>
-                              )
-                            )}
-                          </div>
+                          {soldOut ? (
+                            <span className="sold-out-label">Sold out</span>
+                          ) : food.variants && food.variants.length > 0 ? (
+                            <div className="food-variants">
+                              {food.variants.map((variant) => {
+                                const qty = cart[`variant-${variant.id}`] || 0;
+                                return (
+                                  <div key={variant.id} className="variant-row">
+                                    <div className="variant-info">
+                                      <span className="variant-name">{variant.label}</span>
+                                      <span className="variant-price">₹{variant.price}</span>
+                                    </div>
+                                    {qty === 0 ? (
+                                      <button className="add-btn" onClick={() => addToCart(`variant-${variant.id}`)}>
+                                        + Add
+                                      </button>
+                                    ) : (
+                                      <div className="counter">
+                                        <button className="counter-btn" onClick={() => removeFromCart(`variant-${variant.id}`)}>−</button>
+                                        <span className="counter-num">{qty}</span>
+                                        <button className="counter-btn" onClick={() => addToCart(`variant-${variant.id}`)}>+</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="food-bottom">
+                              <span className="food-price">₹{food.basePrice}</span>
+                              {(() => {
+                                const qty = cart[`food-${food.id}`] || 0;
+                                return qty === 0 ? (
+                                  <button className="add-btn" onClick={() => addToCart(`food-${food.id}`)}>
+                                    + Add
+                                  </button>
+                                ) : (
+                                  <div className="counter">
+                                    <button className="counter-btn" onClick={() => removeFromCart(`food-${food.id}`)}>−</button>
+                                    <span className="counter-num">{qty}</span>
+                                    <button className="counter-btn" onClick={() => addToCart(`food-${food.id}`)}>+</button>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -215,7 +285,7 @@ export default function CustomerPage() {
           <div className="sticky-cart-left">
             <span className="sticky-cart-count">{cartCount} {cartCount === 1 ? "item" : "items"}</span>
             <span className="sticky-cart-preview">
-              {cartItems.slice(0, 2).map(({ food, qty }) => `${food.name} x${qty}`).join(", ")}
+              {cartItems.slice(0, 2).map((item) => `${item.name} x${item.qty}`).join(", ")}
               {cartItems.length > 2 ? "..." : ""}
             </span>
           </div>
@@ -241,16 +311,16 @@ export default function CustomerPage() {
             <div className="cart-items">
 
               {/* Cart items */}
-              {cartItems.map(({ food, qty }) => (
-                <div className="cart-item" key={food.id}>
+              {cartItems.map((item) => (
+                <div className="cart-item" key={item.key}>
                   <div className="cart-item-info">
-                    <span className="cart-item-name">{food.name}</span>
-                    <span className="cart-item-price">₹{food.price * qty}</span>
+                    <span className="cart-item-name">{item.name}</span>
+                    <span className="cart-item-price">₹{item.price * item.qty}</span>
                   </div>
                   <div className="counter">
-                    <button className="counter-btn" onClick={() => removeFromCart(food.id)}>−</button>
-                    <span className="counter-num">{qty}</span>
-                    <button className="counter-btn" onClick={() => addToCart(food.id)}>+</button>
+                    <button className="counter-btn" onClick={() => removeFromCart(item.key)}>−</button>
+                    <span className="counter-num">{item.qty}</span>
+                    <button className="counter-btn" onClick={() => addToCart(item.key)}>+</button>
                   </div>
                 </div>
               ))}
@@ -258,7 +328,7 @@ export default function CustomerPage() {
               {/* Divider */}
               <div className="cart-section-label">Your Details</div>
 
-              {/* Name + Contact fields */}
+              {/* Name field */}
               <div className="cart-customer-fields">
                 <input
                   className={`cart-input ${formError && !customerName.trim() ? "cart-input-error" : ""}`}
@@ -266,14 +336,6 @@ export default function CustomerPage() {
                   placeholder="Your name"
                   value={customerName}
                   onChange={(e) => { setCustomerName(e.target.value); setFormError(""); }}
-                />
-                <input
-                  className={`cart-input ${formError && !/^\d{10}$/.test(contactNumber.trim()) ? "cart-input-error" : ""}`}
-                  type="tel"
-                  placeholder="Contact number (10 digits)"
-                  value={contactNumber}
-                  maxLength={10}
-                  onChange={(e) => { setContactNumber(e.target.value.replace(/\D/g, "")); setFormError(""); }}
                 />
                 {formError && <p className="cart-form-error">{formError}</p>}
               </div>
@@ -296,8 +358,28 @@ export default function CustomerPage() {
       )}
 
       {orderPlaced && (
-        <div className="order-toast">
-          ✅ Order placed! We'll get it ready soon.
+        <div className="success-overlay">
+          <div className="success-card">
+
+            <h2>✅ Order Received</h2>
+
+            <p>Your Token Number</p>
+
+            <div className="token-number">
+              #{tokenNumber}
+            </div>
+
+            <p>
+              Please collect your order using this token.
+            </p>
+
+            <button
+              onClick={() => setOrderPlaced(false)}
+            >
+              OK
+            </button>
+
+          </div>
         </div>
       )}
     </div>

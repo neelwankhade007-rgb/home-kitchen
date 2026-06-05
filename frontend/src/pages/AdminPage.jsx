@@ -32,9 +32,8 @@ function formatTime(iso) {
 
 function StatusBadge({ status }) {
   const map = {
-    PENDING:   { cls: "order-status-pending",   label: "Pending" },
-    CONFIRMED: { cls: "order-status-confirmed", label: "Confirmed" },
-    DONE:      { cls: "order-status-done",      label: "Done" },
+    PENDING: { cls: "order-status-pending", label: "Pending" },
+    READY:   { cls: "order-status-done",    label: "Ready" },
   };
   const { cls, label } = map[status] || { cls: "", label: status };
   return <span className={`order-status-badge ${cls}`}>{label}</span>;
@@ -61,10 +60,10 @@ function LoginGate({ onLogin }) {
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-      if (res.ok && data.token) {
-        onLogin(data.token);
+      if (res.ok && data.success) {
+        onLogin(true);
       } else {
-        setError(data.error || "Invalid credentials.");
+        setError(data.message || "Invalid credentials.");
       }
     } catch {
       setError("Cannot reach server. Is the backend running?");
@@ -102,22 +101,60 @@ function LoginGate({ onLogin }) {
 }
 
 // ── Menu Tab ──────────────────────────────────────────────
-function MenuTab({ token }) {
+function MenuTab() {
   const [foods, setFoods]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [editId, setEditId]     = useState(null);
   const [editData, setEditData] = useState({});
-  const [form, setForm]         = useState({ name: "", price: "", category: "", description: "", available: true });
+  const [form, setForm]         = useState({
+    name: "",
+    category: "",
+    description: "",
+    available: true,
+    hasVariants: false,
+    price: "",
+    variants: [
+      { label: "Half", price: "" },
+      { label: "Full", price: "" }
+    ]
+  });
   const [msg, setMsg]           = useState({ type: "", text: "" });
 
-  const authHeaders = {
+  const addVariant = () => {
+    setForm(f => ({
+      ...f,
+      variants: [
+        ...f.variants,
+        { label: "", price: "" }
+      ]
+    }));
+  };
+
+  const updateVariant = (index, field, value) => {
+    setForm(f => ({
+      ...f,
+      variants: f.variants.map((v, i) =>
+        i === index
+          ? { ...v, [field]: value }
+          : v
+      )
+    }));
+  };
+
+  const removeVariant = (index) => {
+    setForm(f => ({
+      ...f,
+      variants: f.variants.filter((_, i) => i !== index)
+    }));
+  };
+
+  const headers = {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`,
   };
 
   const fetchFoods = () => {
     setLoading(true);
-    fetch("http://localhost:8080/foods", { headers: authHeaders })
+    fetch("http://localhost:8080/foods")
       .then(r => r.json())
       .then(data => { setFoods(data); setLoading(false); })
       .catch(() => setLoading(false));
@@ -132,36 +169,118 @@ function MenuTab({ token }) {
   };
 
   const handleAdd = async () => {
-    if (!form.name.trim()) return showMsg("error", "Name is required.");
-    if (!form.price || isNaN(form.price)) return showMsg("error", "Valid price required.");
+    if (!form.name.trim())
+      return showMsg("error", "Name is required.");
+
+    let payload = {
+      name: form.name,
+      category: form.category,
+      description: form.description,
+      available: form.available,
+      basePrice: null,
+      variants: []
+    };
+
+    if (form.hasVariants) {
+      if (form.variants.length === 0)
+        return showMsg("error", "At least one variant required.");
+
+      const invalidVariant = form.variants.find(
+        v =>
+          !v.label.trim() ||
+          !v.price ||
+          isNaN(v.price) ||
+          Number(v.price) < 0
+      );
+
+      if (invalidVariant)
+        return showMsg(
+          "error",
+          "All variants need name and non-negative price."
+        );
+
+      payload.variants = form.variants.map(v => ({
+        label: v.label,
+        price: Number(v.price),
+        available: true
+      }));
+    } else {
+      if (!form.price || isNaN(form.price) || Number(form.price) < 0) {
+        return showMsg("error", "Valid non-negative price is required.");
+      }
+      payload.basePrice = Number(form.price);
+    }
+
     const res = await fetch("http://localhost:8080/foods", {
       method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({ ...form, price: parseFloat(form.price) }),
+      headers,
+      body: JSON.stringify(payload),
     });
+
     if (res.ok) {
       showMsg("success", "Item added!");
-      setForm({ name: "", price: "", category: "", description: "", available: true });
+      setForm({
+        name: "",
+        category: "",
+        description: "",
+        available: true,
+        hasVariants: false,
+        price: "",
+        variants: [
+          { label: "Half", price: "" },
+          { label: "Full", price: "" }
+        ]
+      });
       fetchFoods();
-    } else showMsg("error", "Failed to add item.");
+    } else {
+      showMsg("error", "Failed to add item.");
+    }
   };
 
   const startEdit = (food) => {
     setEditId(food.id);
-    setEditData({ name: food.name, price: food.price, category: food.category, description: food.description || "", available: food.available });
+    setEditData({
+      name: food.name,
+      basePrice: food.basePrice != null ? food.basePrice : "",
+      category: food.category,
+      description: food.description || "",
+      available: food.available,
+      hasVariants: food.variants && food.variants.length > 0
+    });
   };
 
-  const saveEdit = async (id) => {
-    const res = await fetch(`http://localhost:8080/foods/${id}`, {
+  const saveEdit = async (food) => {
+    if (!editData.name.trim()) return;
+
+    const hasVars = editData.hasVariants;
+    let basePriceVal = null;
+
+    if (!hasVars) {
+      if (editData.basePrice === "" || isNaN(editData.basePrice) || Number(editData.basePrice) < 0) {
+        return;
+      }
+      basePriceVal = Number(editData.basePrice);
+    }
+
+    const payload = {
+      name: editData.name,
+      category: editData.category,
+      description: editData.description,
+      available: editData.available,
+      basePrice: basePriceVal,
+      variants: hasVars ? food.variants : []
+    };
+
+    const res = await fetch(`http://localhost:8080/foods/${food.id}`, {
       method: "PUT",
-      headers: authHeaders,
-      body: JSON.stringify({ ...editData, price: parseFloat(editData.price) }),
+      headers,
+      body: JSON.stringify(payload),
     });
     if (res.ok) { setEditId(null); fetchFoods(); }
   };
 
   const deleteFood = async (id) => {
-    await fetch(`http://localhost:8080/foods/${id}`, { method: "DELETE", headers: authHeaders });
+    await fetch(`http://localhost:8080/foods/${id}`, { method: "DELETE" });
     fetchFoods();
   };
 
@@ -170,17 +289,68 @@ function MenuTab({ token }) {
       <div className="admin-card">
         <div className="admin-section-title">Add New Item</div>
         <div className="add-form">
-          <div className="add-form-row">
+          <div className="add-form-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
             <input className="admin-input" placeholder="Item name" value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            <input className="admin-input" placeholder="Price (₹)" type="number" value={form.price}
-              onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
             <input className="admin-input" placeholder="Category" value={form.category}
               onChange={e => setForm(f => ({ ...f, category: e.target.value }))} />
           </div>
           <input className="admin-input" placeholder="Description (optional)" value={form.description}
             onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-          <div className="add-form-footer">
+
+          <div style={{ margin: "4px 0" }}>
+            <label className="toggle-label" style={{ fontWeight: "600" }}>
+              <input type="checkbox" checked={form.hasVariants}
+                onChange={e => setForm(f => ({ ...f, hasVariants: e.target.checked }))} />
+              This item has variants
+            </label>
+          </div>
+
+          {!form.hasVariants ? (
+            <input className="admin-input" type="number" placeholder="Price (₹)" value={form.price}
+              onChange={e => setForm(f => ({ ...f, price: e.target.value }))} style={{ marginTop: "4px" }} />
+          ) : (
+            <div className="variant-section" style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", marginTop: "4px" }}>
+              <div className="admin-section-title" style={{ fontSize: "14px", marginBottom: "12px" }}>Variants</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
+                {form.variants.map((variant, index) => (
+                  <div key={index} className="add-form-row" style={{ gridTemplateColumns: "2fr 2fr auto", alignItems: "center", gap: "10px" }}>
+                    <input
+                      className="admin-input"
+                      placeholder="Variant Name (e.g. Half, Full)"
+                      value={variant.label}
+                      onChange={(e) => updateVariant(index, "label", e.target.value)}
+                    />
+                    <input
+                      className="admin-input"
+                      type="number"
+                      placeholder="Price"
+                      value={variant.price}
+                      onChange={(e) => updateVariant(index, "price", e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn-delete"
+                      onClick={() => removeVariant(index)}
+                      style={{ padding: "10px 14px", height: "100%", display: "flex", alignItems: "center" }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn-edit"
+                onClick={addVariant}
+                style={{ padding: "8px 16px" }}
+              >
+                + Add Variant
+              </button>
+            </div>
+          )}
+
+          <div className="add-form-footer" style={{ borderTop: "1px solid var(--border)", paddingTop: "16px" }}>
             <label className="toggle-label">
               <input type="checkbox" checked={form.available}
                 onChange={e => setForm(f => ({ ...f, available: e.target.checked }))} />
@@ -209,7 +379,7 @@ function MenuTab({ token }) {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Name</th><th>Price</th><th>Category</th>
+                  <th>Name</th><th>Variants</th><th>Category</th>
                   <th>Description</th><th>Status</th><th>Actions</th>
                 </tr>
               </thead>
@@ -220,8 +390,18 @@ function MenuTab({ token }) {
                       <>
                         <td><input className="table-input" value={editData.name}
                           onChange={e => setEditData(d => ({ ...d, name: e.target.value }))} /></td>
-                        <td><input className="table-input table-input-sm" type="number" value={editData.price}
-                          onChange={e => setEditData(d => ({ ...d, price: e.target.value }))} /></td>
+                        <td>
+                          {editData.hasVariants ? (
+                            food.variants?.map(v => (
+                              <div key={v.id} style={{ fontSize: "13px", whiteSpace: "nowrap" }}>
+                                {v.label} - ₹{v.price}
+                              </div>
+                            ))
+                          ) : (
+                            <input className="table-input" type="number" value={editData.basePrice}
+                              onChange={e => setEditData(d => ({ ...d, basePrice: e.target.value }))} style={{ width: "80px" }} />
+                          )}
+                        </td>
                         <td><input className="table-input" value={editData.category}
                           onChange={e => setEditData(d => ({ ...d, category: e.target.value }))} /></td>
                         <td><input className="table-input" value={editData.description}
@@ -235,7 +415,7 @@ function MenuTab({ token }) {
                         </td>
                         <td>
                           <div className="action-btns">
-                            <button className="btn-save" onClick={() => saveEdit(food.id)}>Save</button>
+                            <button className="btn-save" onClick={() => saveEdit(food)}>Save</button>
                             <button className="btn-cancel" onClick={() => setEditId(null)}>Cancel</button>
                           </div>
                         </td>
@@ -243,7 +423,17 @@ function MenuTab({ token }) {
                     ) : (
                       <>
                         <td className="td-name">{food.name}</td>
-                        <td className="td-price">₹{food.price}</td>
+                        <td>
+                          {food.variants && food.variants.length > 0 ? (
+                            food.variants.map(v => (
+                              <div key={v.id} style={{ fontSize: "13px", whiteSpace: "nowrap" }}>
+                                <strong>{v.label}</strong>: ₹{v.price}
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ fontSize: "13px" }}>₹{food.basePrice}</div>
+                          )}
+                        </td>
                         <td><span className="cat-tag">{food.category || "—"}</span></td>
                         <td className="td-desc">{food.description || <span className="td-empty">—</span>}</td>
                         <td>
@@ -271,20 +461,19 @@ function MenuTab({ token }) {
 }
 
 // ── Orders Tab ────────────────────────────────────────────
-function OrdersTab({ token }) {
+function OrdersTab() {
   const [orders, setOrders]       = useState([]);
   const [loading, setLoading]     = useState(true);
   const [updating, setUpdating]   = useState(null);
   const [selectedDate, setSelectedDate] = useState(todayString());
 
-  const authHeaders = {
+  const headers = {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`,
   };
 
   const fetchOrders = () => {
     setLoading(true);
-    fetch("http://localhost:8080/orders", { headers: authHeaders })
+    fetch("http://localhost:8080/orders")
       .then(r => r.json())
       .then(data => {
         const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -306,7 +495,7 @@ function OrdersTab({ token }) {
     setUpdating(id);
     await fetch(`http://localhost:8080/orders/${id}/status`, {
       method: "PATCH",
-      headers: authHeaders,
+      headers,
       body: JSON.stringify({ status }),
     });
     await fetchOrders();
@@ -316,7 +505,7 @@ function OrdersTab({ token }) {
   const deleteOrder = async (id) => {
     setUpdating(id);
     try {
-      await fetch(`http://localhost:8080/orders/${id}`, { method: "DELETE", headers: authHeaders });
+      await fetch(`http://localhost:8080/orders/${id}`, { method: "DELETE" });
       await fetchOrders();
     } catch (e) {
       console.error("Failed to delete order", e);
@@ -328,7 +517,7 @@ function OrdersTab({ token }) {
   const deleteCompletedOrders = async () => {
     setLoading(true);
     try {
-      await fetch("http://localhost:8080/orders/completed", { method: "DELETE", headers: authHeaders });
+      await fetch("http://localhost:8080/orders/completed", { method: "DELETE" });
       await fetchOrders();
     } catch (e) {
       console.error("Failed to delete completed orders", e);
@@ -339,7 +528,7 @@ function OrdersTab({ token }) {
   const clearAllOrders = async () => {
     setLoading(true);
     try {
-      await fetch("http://localhost:8080/orders", { method: "DELETE", headers: authHeaders });
+      await fetch("http://localhost:8080/orders", { method: "DELETE" });
       await fetchOrders();
     } catch (e) {
       console.error("Failed to clear all orders", e);
@@ -413,7 +602,7 @@ function OrdersTab({ token }) {
           )}
           <span className="admin-count">{filteredOrders.length} orders</span>
           <button className="btn-edit" onClick={fetchOrders}>↻ Refresh</button>
-          {orders.filter(o => o.status === "DONE").length > 0 && (
+          {orders.filter(o => o.status === "READY").length > 0 && (
             <button
               className="btn-delete"
               onClick={deleteCompletedOrders}
@@ -443,9 +632,11 @@ function OrdersTab({ token }) {
             <div key={order.id} className={`order-card order-card-${order.status?.toLowerCase()}`}>
               <div className="order-card-header">
                 <div className="order-card-left">
-                  <span className="order-id">#{order.dailyNumber}</span>
-                  <span className="order-customer">{order.customerName}</span>
-                  <StatusBadge status={order.status} />
+                  <div className="order-token-hero">#{order.dailyNumber}</div>
+                  <div className="order-card-meta">
+                    <span className="order-customer">{order.customerName}</span>
+                    <StatusBadge status={order.status} />
+                  </div>
                 </div>
                 <div className="order-card-right">
                   <span className="order-time">{formatTime(order.createdAt)}</span>
@@ -456,8 +647,13 @@ function OrdersTab({ token }) {
               <div className="order-items-list">
                 {order.items?.map((item, i) => (
                   <div key={i} className="order-item-row">
-                    <span className="order-item-name">{item.foodName}</span>
-                    <span className="order-item-qty">× {item.quantity}</span>
+                    <span className="order-item-name">
+                      <strong>{item.foodName}</strong>
+                      {item.variantName && (
+                        <span className="variant-chip">{item.variantName}</span>
+                      )}
+                    </span>
+                    <span className="order-item-qty">x{item.quantity}</span>
                     <span className="order-item-price">₹{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
@@ -466,21 +662,14 @@ function OrdersTab({ token }) {
               <div className="order-card-footer" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                 <div>
                   {order.status === "PENDING" && (
-                    <button className="order-btn order-btn-confirm"
-                      disabled={updating === order.id}
-                      onClick={() => changeStatus(order.id, "CONFIRMED")}>
-                      {updating === order.id ? "..." : "✓ Confirm"}
-                    </button>
-                  )}
-                  {order.status === "CONFIRMED" && (
                     <button className="order-btn order-btn-done"
                       disabled={updating === order.id}
-                      onClick={() => changeStatus(order.id, "DONE")}>
-                      {updating === order.id ? "..." : "🏁 Mark Done"}
+                      onClick={() => changeStatus(order.id, "READY")}>
+                      {updating === order.id ? "..." : "🏁 Mark Ready"}
                     </button>
                   )}
-                  {order.status === "DONE" && (
-                    <span className="order-done-label">✓ Completed</span>
+                  {order.status === "READY" && (
+                    <span className="order-done-label">✅ Ready for pickup</span>
                   )}
                 </div>
                 <button
@@ -502,10 +691,29 @@ function OrdersTab({ token }) {
 
 // ── Main Admin Page ───────────────────────────────────────
 export default function AdminPage() {
-  const [token, setToken] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [tab, setTab]     = useState("menu");
 
-  if (!token) return <LoginGate onLogin={setToken} />;
+  useEffect(() => {
+    const loggedIn = localStorage.getItem("adminLoggedIn");
+    if (loggedIn === "true") {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const handleLogin = (val) => {
+    if (val) {
+      localStorage.setItem("adminLoggedIn", "true");
+      setIsLoggedIn(true);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("adminLoggedIn");
+    setIsLoggedIn(false);
+  };
+
+  if (!isLoggedIn) return <LoginGate onLogin={handleLogin} />;
 
   return (
     <div className="admin-app">
@@ -523,14 +731,14 @@ export default function AdminPage() {
               <button className={`admin-tab ${tab === "orders" ? "admin-tab-active" : ""}`}
                 onClick={() => setTab("orders")}>📋 Orders</button>
             </div>
-            <button className="admin-logout" onClick={() => setToken(null)}>Logout</button>
+            <button className="admin-logout" onClick={handleLogout}>Logout</button>
           </div>
         </div>
       </header>
 
       <div className="admin-body">
-        {tab === "menu"   && <MenuTab token={token} />}
-        {tab === "orders" && <OrdersTab token={token} />}
+        {tab === "menu"   && <MenuTab />}
+        {tab === "orders" && <OrdersTab />}
       </div>
     </div>
   );
