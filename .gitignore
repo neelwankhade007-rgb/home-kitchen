@@ -68,8 +68,6 @@ postman/
 
 # Maven specific
 .mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
 # Documentation
 HELP.md
