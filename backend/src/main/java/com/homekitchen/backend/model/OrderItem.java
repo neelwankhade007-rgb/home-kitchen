@@ -14,13 +14,17 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String foodName;
+    @ManyToOne
+    @JoinColumn(name = "food_item_id")
+    private FoodItem foodItem;
 
-    private String variantName;
+    @ManyToOne
+    @JoinColumn(name = "food_variant_id")
+    private FoodVariant variant;
     
-    private double price;
+    private Double price;
 
-    private int quantity;
+    private Integer quantity;
 
     @ManyToOne
     @JoinColumn(name = "order_id")

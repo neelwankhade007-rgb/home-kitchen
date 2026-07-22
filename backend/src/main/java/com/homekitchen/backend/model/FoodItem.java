@@ -23,7 +23,7 @@ public class FoodItem {
 
     private String category;
 
-    private boolean available;
+    private Boolean available;
 
     private String description;
 
@@ -41,7 +41,7 @@ public class FoodItem {
     public FoodItem(
             String name,
             String category,
-            boolean available,
+            Boolean available,
             String description
     ) {
         this.name = name;

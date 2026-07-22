@@ -42,11 +42,19 @@ public class OrderService {
         return orderRepository.findAll();
     }
 
+    public Order getOrderById(Long id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new com.homekitchen.backend.exception.FoodException("Order not found"));
+    }
+
     public Order updateStatus(Long id, String status) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new FoodException("Order not found"));
-                order.setStatus(status);
-                return orderRepository.save(order);
+        order.setStatus(status);
+        if ("COMPLETED".equalsIgnoreCase(status)) {
+            order.setCompletedAt(LocalDateTime.now());
+        }
+        return orderRepository.save(order);
     }
 
     public void deleteOrder(Long id) {
@@ -58,7 +66,7 @@ public class OrderService {
 
     public void deleteCompletedOrders() {
         List<Order> completed = orderRepository.findAll().stream()
-                .filter(o -> "READY".equalsIgnoreCase(o.getStatus()))
+                .filter(o -> "COMPLETED".equalsIgnoreCase(o.getStatus()))
                 .collect(java.util.stream.Collectors.toList());
         orderRepository.deleteAll(completed);
     }

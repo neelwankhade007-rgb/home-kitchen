@@ -82,7 +82,7 @@ public class FoodService {
 
         foodItem.setName(updatedFood.getName());
         foodItem.setCategory(updatedFood.getCategory());
-        foodItem.setAvailable(updatedFood.isAvailable());
+        foodItem.setAvailable(updatedFood.getAvailable());
         foodItem.setDescription(updatedFood.getDescription());
 
         if (hasVariants) {

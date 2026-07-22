@@ -16,9 +16,9 @@ public class FoodVariant {
 
     private String label;
 
-    private double price;
+    private Double price;
 
-    private boolean available = true;
+    private Boolean available = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "food_item_id")
@@ -30,8 +30,8 @@ public class FoodVariant {
 
     public FoodVariant(
             String label,
-            double price,
-            boolean available
+            Double price,
+            Boolean available
     ) {
         this.label = label;
         this.price = price;

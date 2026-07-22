@@ -29,6 +29,11 @@ public class OrderController {
         return orderService.getAllOrders();
     }
 
+    @GetMapping("/{id}")
+    public Order getOrderById(@PathVariable Long id) {
+        return orderService.getOrderById(id);
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<Order> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(orderService.updateStatus(id, body.get("status")));

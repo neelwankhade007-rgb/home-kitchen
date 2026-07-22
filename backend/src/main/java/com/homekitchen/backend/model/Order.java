@@ -11,10 +11,12 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String customerName;
-    private double totalPrice;
-    private String status; // PENDING, CONFIRMED, DONE
-    @Column(updatable = false)
+    private String customerPhone;
+    private Double totalPrice;
+    private String status; // PENDING, PREPARING, READY, COMPLETED
     private LocalDateTime createdAt;
+    
+    private LocalDateTime completedAt;
     
     @Column(updatable = false)
     private Integer dailyNumber;
@@ -48,11 +50,19 @@ public class Order {
         this.customerName = customerName;
     }
 
-    public double getTotalPrice() {
+    public String getCustomerPhone() {
+        return customerPhone;
+    }
+
+    public void setCustomerPhone(String customerPhone) {
+        this.customerPhone = customerPhone;
+    }
+
+    public Double getTotalPrice() {
         return totalPrice;
     }
 
-    public void setTotalPrice(double totalPrice) {
+    public void setTotalPrice(Double totalPrice) {
         this.totalPrice = totalPrice;
     }
 
@@ -86,5 +96,13 @@ public class Order {
 
     public void setDailyNumber(Integer dailyNumber) {
         this.dailyNumber = dailyNumber;
+    }
+
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
     }
 }
