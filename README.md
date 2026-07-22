@@ -1,35 +1,36 @@
 # 🍳 Home Kitchen - Full-Stack Food Ordering Platform
 
-**Home Kitchen** is a responsive, production-ready, full-stack food ordering and management platform designed specifically for small-scale food businesses like home-kitchens, cafes, and snack bars. 
+**Home Kitchen** is a responsive, production-ready, full-stack food ordering and management platform designed specifically for small-scale food businesses like home-kitchens, cafes, and snack bars.
 
-The system features a modern, clean customer-facing interface for browsing categorized menu items and managing an active cart, combined with a secure, JWT-authenticated admin dashboard for tracking orders, managing menu CRUD operations, and reviewing daily revenue insights.
+The system features a modern, beautifully designed customer-facing interface for browsing categorized menu items and managing an active cart, combined with a secure admin dashboard for tracking orders, managing menu CRUD operations, and reviewing daily revenue insights.
 
 ---
 
 ## 🚀 Key Features
 
 ### 🛒 Customer Ordering & Experience
-- **📂 Categorized Menu**: Browse items dynamically by category with intuitive pill filters and custom emoji section headers.
-- **🛒 Dynamic Cart Management**: Add items, adjust quantities, and view real-time price calculations.
-- **📋 Seamless Checkout Drawer**: Input customer details (Name, Phone, Delivery Address) and submit orders instantly.
-- **✨ Responsive Design**: Fully responsive layout optimized for mobile, tablet, and desktop screens using Vanilla CSS.
-
-### 🔒 Admin Security & Authentication
-- **🔑 Session-Based Active Admin Flags**: Admin logins verify credentials and store a local storage flag (`adminLoggedIn`) to persist the active dashboard session.
-- **❌ Secure Router Guards**: Prevent unauthorized users from accessing the admin dashboard or triggering management APIs.
+- **📂 Categorized Menu**: Browse items dynamically by category with intuitive pill filters and custom category icons.
+- **🛒 Dynamic Cart Management**: Add items, customize variants (e.g., portion sizes), adjust quantities, and view real-time calculations.
+- **📋 Seamless Checkout Drawer**: Input customer details (Name, Phone Number) with custom input validation.
+- **📱 Enforced 10-Digit Phone Check**: Prevents order placement without a valid 10-digit phone number.
+- **🔔 Premium Top-Sliding Toasts**: Displays errors and successes using high-fidelity, top-sliding custom notification banners instead of browser-native `alert()` dialogs.
+- **📍 Live Order Status Tracker**:
+  - Provides a real-time progress timeline mapping: `Order Placed` ➔ `Preparing Meal` ➔ `Ready for Pickup` ➔ `Picked Up`.
+  - Automatically polls backend status changes every **4 seconds** in the background.
+  - Automatically expires and disappears **5 minutes** after the admin marks the order as `COMPLETED`.
 
 ### 📊 Admin Operations Dashboard
-- **📋 Live Orders Tracking**: Real-time order monitoring console displaying customer details, ordered items, and current status.
-- **🔄 Order Status Workflow**: Transition orders seamlessly through their lifecycle (`PENDING` ➔ `CONFIRMED` ➔ `DONE`).
+- **📋 Live Orders Console**: Real-time order monitoring dashboard displaying customer details, ordered items, and current status.
+- **🔄 Order Status Workflow**: Transition orders seamlessly through 4 states: `PENDING` ➔ `PREPARING` ➔ `READY` ➔ `COMPLETED`.
 - **📅 Daily Insights & Metrics**: Review total daily revenue and total orders for a chosen date using calendar filtering.
 - **🔢 Daily Order Numbers**: Display chronological daily order numbers (e.g., Order #1, Order #2) instead of raw database IDs.
-- **🛠️ Menu CRUD Management**: Fully-featured interface to add, edit, toggle availability of, and delete menu items on the fly.
+- **🛠️ Menu CRUD Management**: Fully-featured interface to add, edit, configure multi-portion price variants, toggle availability of, and delete menu items on the fly.
 
 ### ⚙️ Backend & Engineering Highlights
 - **🔒 Data Consistency (ACID)**: Uses Spring's declarative `@Transactional` management to ensure multi-table writes (orders & order items) succeed or fail atomically.
-- **🏷️ Price Snapshotting**: Prevents historical order revenue changes by storing the exact `priceAtPurchase` in `OrderItem` records at checkout time.
+- **🛡️ Deserialization Safety**: All entities use wrapper classes (`Boolean`, `Double`, `Integer`) to gracefully handle partial JSON requests and avoid primitive deserialization errors.
+- **🏷️ Price Snapshotting**: Prevents historical order revenue changes by storing the exact `price` in `OrderItem` records at checkout time.
 - **🛡️ Global Exception Handling**: Centralized exception handler maps custom errors to clean JSON API responses instead of raw stack traces.
-- **✅ Server-Side Validation**: Enforces input constraints (e.g., non-empty strings, positive numbers) using JSR-380 annotations.
 
 ---
 
@@ -41,7 +42,7 @@ The application follows the industry-standard **Three-Tier Architecture** patter
 graph TD
     subgraph Client Tier (Frontend)
         A[React App / Vite] -->|State Management| B[React Hooks: useState, useEffect]
-        A -->|Styling| C[Vanilla CSS Flexbox/Grid]
+        A -->|Styling| C[Tailwind CSS v4 & custom micro-animations]
     end
 
     subgraph Presentation & Security Tier (API Gate)
@@ -68,16 +69,25 @@ The relational database schema is designed to support transactional consistency,
 
 ```mermaid
 erDiagram
+    FOOD_ITEM ||--o{ FOOD_VARIANT : "has"
     FOOD_ITEM ||--o{ ORDER_ITEM : "contains"
+    FOOD_VARIANT ||--o{ ORDER_ITEM : "specifies"
     ORDER ||--|{ ORDER_ITEM : "comprises"
 
     FOOD_ITEM {
         Long id PK
         String name "Not Null"
+        String category "Not Null"
         String description
-        Double price "Not Null, Min 0"
-        String category "Not Null (e.g., Beverages, Mains)"
-        String imageUrl
+        Double basePrice "Nullable (if variants exist)"
+        Boolean available "Default: true"
+    }
+
+    FOOD_VARIANT {
+        Long id PK
+        Long food_item_id FK "ManyToOne to FoodItem"
+        String label "Not Null (e.g. Medium)"
+        Double price "Not Null"
         Boolean available "Default: true"
     }
 
@@ -85,19 +95,20 @@ erDiagram
         Long id PK
         String customerName "Not Null"
         String customerPhone "Not Null"
-        String deliveryAddress "Not Null"
-        Double totalAmount "Not Null"
-        String status "PENDING, CONFIRMED, DONE"
-        LocalDateTime orderDate "Default: Current Timestamp"
-        Long dailyOrderNumber "Chronological order count per day"
+        Double totalPrice "Not Null"
+        String status "PENDING, PREPARING, READY, COMPLETED"
+        LocalDateTime createdAt "Default: Current Timestamp"
+        LocalDateTime completedAt "Set when status becomes COMPLETED"
+        Integer dailyNumber "Chronological order count per day"
     }
 
     ORDER_ITEM {
         Long id PK
         Long order_id FK "Cascade Delete on Order"
         Long food_item_id FK "ManyToOne to FoodItem"
-        Integer quantity "Min 1"
-        Double priceAtPurchase "Snapshotted price for historical accuracy"
+        Long food_variant_id FK "ManyToOne to FoodVariant"
+        Integer quantity "Not Null"
+        Double price "Snapshotted price for historical accuracy"
     }
 ```
 
@@ -108,17 +119,13 @@ erDiagram
 ### Frontend
 - **React & Vite**: Modern component-based view rendering and fast development builds.
 - **React Router**: Single-Page Application (SPA) client-side routing.
-- **Vanilla CSS**: Clean layouts utilizing Flexbox, Grid, custom properties, and micro-animations.
+- **Tailwind CSS v4**: Utility-first CSS styling framework.
+- **Lucide React**: Clean and modern vector icon library.
 
 ### Backend & Database
-- **Spring Boot**: REST API creation, dependency injection, and security.
+- **Spring Boot**: REST API creation and dependency injection.
 - **Spring Data JPA & Hibernate**: Object-Relational Mapping (ORM) and abstract repository pattern.
 - **MySQL**: Relational database storage.
-
-### Tools & Package Managers
-- **Maven**: Dependency resolution and backend build tool.
-- **NPM**: Frontend package management.
-- **Git**: Distributed version control.
 
 ---
 
@@ -129,9 +136,9 @@ home-kitchen/
 ├── backend/
 │   └── src/main/java/com/homekitchen/backend/
 │       ├── controller/
-│       │   ├── AuthController.java       # POST /auth/login → Credentials validation
+│       │   ├── AuthController.java       # POST /auth/login → Admin authentication
 │       │   ├── HomeController.java       # Food item CRUD
-│       │   └── OrderController.java      # Order placement & status updates
+│       │   └── OrderController.java      # Order CRUD & status transitions
 │       ├── dto/
 │       │   └── ApiResponse.java
 │       ├── exception/
@@ -139,6 +146,7 @@ home-kitchen/
 │       │   └── GlobalExceptionHandler.java
 │       ├── model/
 │       │   ├── FoodItem.java
+│       │   ├── FoodVariant.java
 │       │   ├── Order.java
 │       │   └── OrderItem.java
 │       ├── repository/
@@ -149,14 +157,14 @@ home-kitchen/
 │           ├── FoodService.java
 │           └── OrderService.java
 ├── frontend/
-│   └── src/
-│       ├── pages/
-│       │   ├── AdminPage.jsx             # Login + Menu + Orders tabs
-│       │   └── CustomerPage.jsx          # Menu browsing + cart + checkout
-│       ├── Admin.css
-│       ├── App.css
-│       ├── App.jsx
-│       └── main.jsx
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── AdminPage.jsx             # Admin login + Menu control + Orders console
+│   │   │   └── CustomerPage.jsx          # Menu feed + customization modal + Live tracker
+│   │   ├── App.jsx
+│   │   ├── index.css                 # Custom keyframes & Tailwind imports
+│   │   └── main.jsx
+│   └── vercel.json                   # Rewrite configuration for SPA client routing
 └── README.md
 ```
 
@@ -165,12 +173,12 @@ home-kitchen/
 ## ⚙️ Local Setup
 
 ### Prerequisites
-- **Java 17+** (JDK 17 or higher)
+- **Java 17+**
 - **Node.js 18+**
 - **MySQL Server**
 
 ### 1. Database Creation
-Create a MySQL database schemas:
+Create a MySQL database schema:
 ```sql
 CREATE DATABASE home_kitchen;
 ```
@@ -187,12 +195,7 @@ spring.jpa.hibernate.ddl-auto=update
 Navigate to the backend directory and launch the Spring Boot application:
 ```bash
 cd backend
-
-# Windows
-.\mvnw.cmd spring-boot:run
-
-# Mac / Linux
-./mvnw spring-boot:run
+.\mvnw.cmd clean spring-boot:run
 ```
 The server will run on `http://localhost:8080`.
 
@@ -215,50 +218,25 @@ Access the admin interface at `http://localhost:5173/admin` with:
 ## 🔌 API Reference
 
 ### Auth Endpoint
-| Method | Endpoint | Description | Headers |
-|--------|----------|-------------|---------|
-| `POST` | `/api/auth/login` | Login and verify credentials | None |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/auth/login` | Login and verify credentials |
 
-### Food Items (`/api/foods`)
+### Food Items (`/foods`)
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| `GET` | `/api/foods` | Get all food items | No |
-| `GET` | `/api/foods/category/{category}` | Filter food items by category name | No |
-| `POST` | `/api/api/foods` | Add a new food item to the menu | **Yes** (Admin Login) |
-| `PUT` | `/api/foods/{id}` | Update an existing food item | **Yes** (Admin Login) |
-| `DELETE` | `/api/foods/{id}` | Delete a food item | **Yes** (Admin Login) |
+| `GET` | `/foods` | Get all food items | No |
+| `POST` | `/foods` | Add a new food item | **Yes** (Admin Login) |
+| `PUT` | `/foods/{id}` | Update an existing food item | **Yes** (Admin Login) |
+| `DELETE` | `/foods/{id}` | Delete a food item | **Yes** (Admin Login) |
 
-### Orders (`/api/orders`)
+### Orders (`/orders`)
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| `POST` | `/api/orders` | Place a new order | No |
-| `GET` | `/api/orders` | Fetch all orders | **Yes** (Admin Login) |
-| `PATCH` | `/api/orders/{id}/status` | Update order status (`PENDING` ➔ `CONFIRMED` ➔ `DONE`) | **Yes** (Admin Login) |
-| `DELETE` | `/api/orders/{id}` | Delete a specific order record | **Yes** (Admin Login) |
-| `DELETE` | `/api/orders/completed` | Clear all orders marked as `DONE` | **Yes** (Admin Login) |
-| `DELETE` | `/api/orders` | Wipe all order records | **Yes** (Admin Login) |
-
----
-
-## 🛠️ Troubleshooting & Configuration
-
-- **Port 8080 is already in use (Windows)**:
-  Find and kill the process running on port 8080:
-  ```powershell
-  netstat -ano | findstr :8080
-  taskkill /PID <PID> /F
-  ```
-- **CORS blockages**: Ensure that backend controllers have `@CrossOrigin(origins = "http://localhost:5173/")` annotations matching the local frontend dev URL.
-- **Java Version verification**:
-  Verify the current run environment:
-  ```bash
-  java -version
-  ```
-
----
-
-## 🔮 Future Roadmap
-- [ ] Live restaurant open/closed status toggle.
-- [ ] Native dark/light mode toggle with CSS Variables.
-- [ ] AWS S3 or Cloudinary integration for menu image uploads.
-- [ ] SSE (Server-Sent Events) or WebSockets for instant admin notifications of incoming orders.
+| `POST` | `/orders` | Place a new order | No |
+| `GET` | `/orders` | Fetch all orders | **Yes** (Admin Login) |
+| `GET` | `/orders/{id}` | Fetch a single order status for tracking | No |
+| `PATCH` | `/orders/{id}/status` | Update status (`PENDING` ➔ `PREPARING` ➔ `READY` ➔ `COMPLETED`) | **Yes** (Admin Login) |
+| `DELETE` | `/orders/{id}` | Delete a specific order record | **Yes** (Admin Login) |
+| `DELETE` | `/orders/completed` | Clear all orders marked as `COMPLETED` | **Yes** (Admin Login) |
+| `DELETE` | `/orders` | Wipe all order records | **Yes** (Admin Login) |
