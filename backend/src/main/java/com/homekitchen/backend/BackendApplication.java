@@ -11,11 +11,20 @@ import org.springframework.jdbc.core.JdbcTemplate;
 public class BackendApplication {
 
 	public static void main(String[] args) {
-		// Run a pre-boot schema cleanup patch to drop order transaction tables and avoid FK errno 150 conflicts on remote DB
-		try (java.sql.Connection conn = java.sql.DriverManager.getConnection(
-				"jdbc:mysql://sql12.freesqldatabase.com:3306/sql12833643?useSSL=false&allowPublicKeyRetrieval=true",
-				"sql12833643",
-				"vRUtp93GUf")) {
+		String dbUrl = System.getenv("DB_URL");
+		String dbUser = System.getenv("DB_USERNAME");
+		String dbPass = System.getenv("DB_PASSWORD");
+		
+		if (dbUrl == null) dbUrl = "jdbc:mysql://sql12.freesqldatabase.com:3306/sql12833643";
+		if (dbUser == null) dbUser = "sql12833643";
+		if (dbPass == null) dbPass = "vRUtp93GUf";
+
+		// Append SSL query parameters if not present in the URL
+		if (!dbUrl.contains("?")) {
+			dbUrl += "?useSSL=false&allowPublicKeyRetrieval=true";
+		}
+
+		try (java.sql.Connection conn = java.sql.DriverManager.getConnection(dbUrl, dbUser, dbPass)) {
 			try (java.sql.Statement stmt = conn.createStatement()) {
 				stmt.execute("SET FOREIGN_KEY_CHECKS = 0");
 				stmt.execute("DROP TABLE IF EXISTS order_item");
